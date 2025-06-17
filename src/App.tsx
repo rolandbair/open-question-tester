@@ -78,17 +78,6 @@ function App() {
 
       <div className="input-section">
         <div className="input-group">
-          <label htmlFor="apiKey">API Key:</label>
-          <input
-            type="text"
-            id="apiKey"
-            value={apiKey}
-            onChange={(e) => handleApiKeyChange(e.target.value)}
-            placeholder="Enter your OpenAI API key..."
-          />
-        </div>
-
-        <div className="input-group">
           <label htmlFor="question">Teacher's Question:</label>
           <textarea
             id="question"
