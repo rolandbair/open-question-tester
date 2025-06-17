@@ -11,6 +11,7 @@ export interface PromptEntry {
     evaluationCriteria: string;
     sampleSolution: string;
     answer: string;
+    systemPrompt: string;
     status: 'pending' | 'completed' | 'error';
     feedback?: ApiResponse;
 }

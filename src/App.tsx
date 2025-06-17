@@ -5,6 +5,21 @@ import { evaluateAnswer, initializeOpenAI } from './api'
 import { v4 as uuidv4 } from 'uuid'
 
 function App() {
+  const defaultSystemPrompt = `You are an educational evaluator. Your task is to:
+1. Use the evaluation criteria as the primary basis for assessment
+2. Reference the sample solution for specific terminology and phrasing used in class
+3. Compare the student's answer against both the criteria and sample solution
+4. Find the two biggest gaps as improvement areas
+5. Calculate a score based on criteria fulfillment and proper terminology use
+
+Return ONLY a JSON response with this structure, evaluation result in German language, Du-Form:
+{
+    "factors": ["list", "of", "key", "criteria", "and", "terms"],
+    "gaps": ["first major gap", "second major gap"],
+    "percentage": number,
+    "evaluation": "overall feedback focusing on both criteria and terminology"
+}`;
+
   const [apiKey, setApiKey] = useState(() => {
     const saved = localStorage.getItem('openai_api_key');
     if (saved) {
@@ -12,6 +27,12 @@ function App() {
     }
     return saved || '';
   });
+  
+  const [systemPrompt, setSystemPrompt] = useState(() => {
+    const saved = localStorage.getItem('system_prompt');
+    return saved || defaultSystemPrompt;
+  });
+  
   const [question, setQuestion] = useState('')
   const [evaluationCriteria, setEvaluationCriteria] = useState('')
   const [sampleSolution, setSampleSolution] = useState('')
@@ -23,6 +44,13 @@ function App() {
     if (key) {
       localStorage.setItem('openai_api_key', key);
       initializeOpenAI(key);
+    }
+  };
+
+  const handleSystemPromptChange = (prompt: string) => {
+    setSystemPrompt(prompt);
+    if (prompt) {
+      localStorage.setItem('system_prompt', prompt);
     }
   };
 
@@ -39,13 +67,14 @@ function App() {
       evaluationCriteria,
       sampleSolution,
       answer,
+      systemPrompt,
       status: 'pending'
     }
 
     setEntries(prev => [newEntry, ...prev])
 
     try {
-      const result = await evaluateAnswer(question, evaluationCriteria, sampleSolution, answer)
+      const result = await evaluateAnswer(question, evaluationCriteria, sampleSolution, answer, systemPrompt)
       setEntries(prev => prev.map(entry =>
         entry.id === newEntry.id
           ? { ...entry, status: 'completed', feedback: result }
@@ -74,6 +103,18 @@ function App() {
             onChange={(e) => handleApiKeyChange(e.target.value)}
             placeholder="Enter your OpenAI API key"
             className="api-key-input"
+          />
+        </div>
+
+        <div className="input-group">
+          <label htmlFor="systemPrompt">System Prompt:</label>
+          <textarea
+            id="systemPrompt"
+            value={systemPrompt}
+            onChange={(e) => handleSystemPromptChange(e.target.value)}
+            placeholder="Enter the system prompt for evaluation..."
+            rows={8}
+            className="system-prompt-input"
           />
         </div>
       </div>
@@ -141,6 +182,8 @@ function App() {
             {entries.map(entry => (
               <tr key={entry.id}>
                 <td>
+                  <strong>System Prompt:</strong>
+                  <p className="monospace">{entry.systemPrompt}</p>
                   <strong>Question:</strong>
                   <p>{entry.question}</p>
                   <strong>Evaluation Criteria:</strong>

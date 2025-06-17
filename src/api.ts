@@ -10,7 +10,13 @@ export function initializeOpenAI(apiKey: string) {
     });
 }
 
-export async function evaluateAnswer(question: string, evaluationCriteria: string, sampleSolution: string, answer: string): Promise<ApiResponse> {
+export async function evaluateAnswer(
+    question: string, 
+    evaluationCriteria: string, 
+    sampleSolution: string, 
+    answer: string,
+    systemPrompt: string
+): Promise<ApiResponse> {
     if (!openaiInstance) {
         throw new Error('OpenAI not initialized. Please enter your API key.');
     }
@@ -18,22 +24,9 @@ export async function evaluateAnswer(question: string, evaluationCriteria: strin
     try {
         const completion = await openaiInstance.chat.completions.create({
             model: "gpt-3.5-turbo",
-            messages: [
-                {
-                    role: "system",                    content: `You are an educational evaluator. Your task is to:
-1. Use the evaluation criteria as the primary basis for assessment
-2. Reference the sample solution for specific terminology and phrasing used in class
-3. Compare the student's answer against both the criteria and sample solution
-4. Find the two biggest gaps as improvement areas
-5. Calculate a score based on criteria fulfillment and proper terminology use
-
-Return ONLY a JSON response with this structure, evaluation result in German language, Du-Form:
-{
-    "factors": ["list", "of", "key", "criteria", "and", "terms"],
-    "gaps": ["first major gap", "second major gap"],
-    "percentage": number,
-    "evaluation": "overall feedback focusing on both criteria and terminology"
-}`
+            messages: [                {
+                    role: "system",
+                    content: systemPrompt
                 },
                 {
                     role: "user",
