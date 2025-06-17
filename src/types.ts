@@ -8,6 +8,7 @@ export interface ApiResponse {
 export interface PromptEntry {
     id: string;
     question: string;
+    evaluationCriteria: string;
     sampleSolution: string;
     answer: string;
     status: 'pending' | 'completed' | 'error';

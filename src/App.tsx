@@ -13,6 +13,7 @@ function App() {
     return saved || '';
   });
   const [question, setQuestion] = useState('')
+  const [evaluationCriteria, setEvaluationCriteria] = useState('')
   const [sampleSolution, setSampleSolution] = useState('')
   const [answer, setAnswer] = useState('')
   const [entries, setEntries] = useState<PromptEntry[]>([])
@@ -30,11 +31,12 @@ function App() {
       alert('Please enter your OpenAI API key first');
       return;
     }
-    if (!question || !sampleSolution || !answer) return
+    if (!question || !evaluationCriteria || !sampleSolution || !answer) return
 
     const newEntry: PromptEntry = {
       id: uuidv4(),
       question,
+      evaluationCriteria,
       sampleSolution,
       answer,
       status: 'pending'
@@ -43,7 +45,7 @@ function App() {
     setEntries(prev => [newEntry, ...prev])
 
     try {
-      const result = await evaluateAnswer(question, sampleSolution, answer)
+      const result = await evaluateAnswer(question, evaluationCriteria, sampleSolution, answer)
       setEntries(prev => prev.map(entry =>
         entry.id === newEntry.id
           ? { ...entry, status: 'completed', feedback: result }
@@ -89,12 +91,23 @@ function App() {
         </div>
 
         <div className="input-group">
+          <label htmlFor="evaluationCriteria">Evaluation Criteria:</label>
+          <textarea
+            id="evaluationCriteria"
+            value={evaluationCriteria}
+            onChange={(e) => setEvaluationCriteria(e.target.value)}
+            placeholder="Enter the evaluation criteria that will be used to assess the answer..."
+            rows={4}
+          />
+        </div>
+
+        <div className="input-group">
           <label htmlFor="sampleSolution">Sample Solution:</label>
           <textarea
             id="sampleSolution"
             value={sampleSolution}
             onChange={(e) => setSampleSolution(e.target.value)}
-            placeholder="Enter the sample solution that will be used to evaluate the student's answer..."
+            placeholder="Enter the sample solution for terminology reference..."
             rows={4}
           />
         </div>
@@ -130,6 +143,8 @@ function App() {
                 <td>
                   <strong>Question:</strong>
                   <p>{entry.question}</p>
+                  <strong>Evaluation Criteria:</strong>
+                  <p>{entry.evaluationCriteria}</p>
                   <strong>Sample Solution:</strong>
                   <p>{entry.sampleSolution}</p>
                   <strong>Student's Answer:</strong>
