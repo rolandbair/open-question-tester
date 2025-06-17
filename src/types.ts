@@ -8,8 +8,8 @@ export interface ApiResponse {
 export interface PromptEntry {
     id: string;
     question: string;
-    evaluationCriteria: string;
-    sampleSolution: string;
+    evaluationCriteria?: string;
+    sampleSolution?: string;
     answer: string;
     systemPrompt: string;
     status: 'pending' | 'completed' | 'error';

@@ -27,10 +27,12 @@ export async function evaluateAnswer(
             messages: [                {
                     role: "system",
                     content: systemPrompt
-                },
-                {
+                },                {
                     role: "user",
-                    content: `Question: "${question}"\nEvaluation Criteria: "${evaluationCriteria}"\nSample Solution: "${sampleSolution}"\nStudent's Answer: "${answer}"`
+                    content: `Question: "${question}"
+${evaluationCriteria ? `Evaluation Criteria: "${evaluationCriteria}"` : ''}
+${sampleSolution ? `Sample Solution: "${sampleSolution}"` : ''}
+Student's Answer: "${answer}"`
                 }
             ],
             temperature: 0.7,

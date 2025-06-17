@@ -6,11 +6,11 @@ import { v4 as uuidv4 } from 'uuid'
 
 function App() {
   const defaultSystemPrompt = `You are an educational evaluator. Your task is to:
-1. Use the evaluation criteria as the primary basis for assessment
-2. Reference the sample solution for specific terminology and phrasing used in class
-3. Compare the student's answer against both the criteria and sample solution
+1. If evaluation criteria are provided, use them as the primary basis for assessment
+2. If a sample solution is provided, reference it for specific terminology and phrasing
+3. Evaluate the student's answer based on available context
 4. Find the two biggest gaps as improvement areas
-5. Calculate a score based on criteria fulfillment and proper terminology use
+5. Calculate a score based on answer quality and contextual alignment
 
 Return ONLY a JSON response with this structure, evaluation result in German language, Du-Form:
 {
@@ -59,7 +59,10 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
       alert('Please enter your OpenAI API key first');
       return;
     }
-    if (!question || !evaluationCriteria || !sampleSolution || !answer) return
+    if (!question || !answer) {
+      alert('Please provide both a question and an answer');
+      return;
+    }
 
     const newEntry: PromptEntry = {
       id: uuidv4(),
@@ -137,7 +140,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
             id="evaluationCriteria"
             value={evaluationCriteria}
             onChange={(e) => setEvaluationCriteria(e.target.value)}
-            placeholder="Enter the evaluation criteria that will be used to assess the answer..."
+            placeholder="(Optional) Enter the evaluation criteria that will be used to assess the answer..."
             rows={4}
           />
         </div>
@@ -148,7 +151,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
             id="sampleSolution"
             value={sampleSolution}
             onChange={(e) => setSampleSolution(e.target.value)}
-            placeholder="Enter the sample solution for terminology reference..."
+            placeholder="(Optional) Enter the sample solution for terminology reference..."
             rows={4}
           />
         </div>
