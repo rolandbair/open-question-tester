@@ -5,6 +5,14 @@
 - Local command execution uses PowerShell as the default shell
 - Project is a Vite-based React TypeScript application
 - The project is configured for deployment to GitHub Pages
+- Local development server runs at http://localhost:5173
+
+## Deployment
+
+- Use `npm run deploy` to build and deploy changes to GitHub Pages
+- This runs the build process and publishes to the gh-pages branch
+- Changes to documentation files don't require redeployment
+- Only changes affecting the built application (source code, styles, etc.) need deployment
 
 ## Project Structure
 
