@@ -1,10 +1,13 @@
-import { useState } from 'react'
-import './App.css'
-import type { PromptEntry } from './types'
-import { evaluateAnswer, initializeOpenAI } from './api'
-import { v4 as uuidv4 } from 'uuid'
+import { useState } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import './App.css';
+import type { PromptEntry } from './types';
+import { evaluateAnswer, initializeOpenAI } from './api';
+import { v4 as uuidv4 } from 'uuid';
+import Navigation from './Navigation';
+import BatchProcessor from './BatchProcessor';
 
-function App() {
+function SingleEntry() {
   const defaultSystemPrompt = `You are an educational evaluator. Your task is to:
 1. If evaluation criteria are provided, use them as the primary basis for assessment
 2. If a sample solution is provided, reference it for specific terminology and phrasing
@@ -91,10 +94,9 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
       ))
     }
   }
-
   return (
     <div className="container">
-      <h1>Open Question Evaluator</h1>
+      <h1>Single Question Evaluator</h1>
       
       <div className="api-key-section">
         <div className="input-group">
@@ -223,7 +225,20 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
         </table>
       </div>
     </div>
-  )
+  );
 }
 
-export default App
+function App() {
+  const basename = process.env.NODE_ENV === 'production' ? '/open-question-tester' : '';
+  return (
+    <BrowserRouter basename={basename}>
+      <Navigation />
+      <Routes>
+        <Route path="/" element={<SingleEntry />} />
+        <Route path="/batch" element={<BatchProcessor />} />
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

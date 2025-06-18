@@ -221,3 +221,55 @@ li {
 .gaps-list li:last-child {
   margin-bottom: 1em;
 }
+
+.navigation {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.navigation a {
+  color: #333;
+  text-decoration: none;
+  padding: 0.5rem 1rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.navigation a:hover {
+  background-color: #f0f2f5;
+}
+
+.navigation a.active {
+  background-color: #0066cc;
+  color: white;
+}
+
+.file-upload {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  padding: 1rem;
+  border: 2px dashed #dee2e6;
+  border-radius: 4px;
+  text-align: center;
+}
+
+.file-upload input[type="file"] {
+  display: block;
+  margin: 1rem auto;
+}
+
+.file-upload p {
+  color: #666;
+  margin: 0;
+}
+
+.processing {
+  text-align: center;
+  color: #0066cc;
+  font-style: italic;
+  margin: 1rem 0;
+}
