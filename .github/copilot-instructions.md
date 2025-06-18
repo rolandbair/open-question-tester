@@ -7,8 +7,17 @@
 - The project is configured for deployment to GitHub Pages
 - Local development server runs at http://localhost:5173
 
-## Deployment
+## Version Control & Deployment
 
+### Git Workflow
+- Always push changes to the remote repository after committing
+- Use descriptive commit messages that explain the changes
+- Basic workflow:
+  1. `git add <files>`
+  2. `git commit -m "descriptive message"`
+  3. `git push`
+
+### Deployment
 - Use `npm run deploy` to build and deploy changes to GitHub Pages
 - This runs the build process and publishes to the gh-pages branch
 - Changes to documentation files don't require redeployment
