@@ -205,6 +205,12 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
                         Score: {entry.feedback.percentage}%
                       </div>
                       <div className="evaluation">
+                        <h4>Main Improvement Areas:</h4>
+                        <ul className="gaps-list">
+                          {entry.feedback.gaps.map((gap, index) => (
+                            <li key={index}>{gap}</li>
+                          ))}
+                        </ul>
                         <h4>Overall Feedback:</h4>
                         <p>{entry.feedback.evaluation}</p>
                       </div>
