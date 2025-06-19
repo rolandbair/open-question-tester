@@ -2,10 +2,11 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
 import type { PromptEntry } from './types';
-import { evaluateAnswer, initializeOpenAI } from './api';
+import { evaluateAnswer } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import Navigation from './Navigation';
 import BatchProcessor from './BatchProcessor';
+import { ApiProvider } from './ApiContext';
 
 function SingleEntry() {
   const defaultSystemPrompt = `You are an educational evaluator. Your task is to:
@@ -23,14 +24,6 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
     "evaluation": "overall feedback focusing on both criteria and terminology"
 }`;
 
-  const [apiKey, setApiKey] = useState(() => {
-    const saved = localStorage.getItem('openai_api_key');
-    if (saved) {
-      initializeOpenAI(saved);
-    }
-    return saved || '';
-  });
-  
   const [systemPrompt, setSystemPrompt] = useState(() => {
     const saved = localStorage.getItem('system_prompt');
     return saved || defaultSystemPrompt;
@@ -42,14 +35,6 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   const [answer, setAnswer] = useState('')
   const [entries, setEntries] = useState<PromptEntry[]>([])
 
-  const handleApiKeyChange = (key: string) => {
-    setApiKey(key);
-    if (key) {
-      localStorage.setItem('openai_api_key', key);
-      initializeOpenAI(key);
-    }
-  };
-
   const handleSystemPromptChange = (prompt: string) => {
     setSystemPrompt(prompt);
     if (prompt) {
@@ -58,10 +43,6 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   };
 
   const handleSubmit = async () => {
-    if (!apiKey) {
-      alert('Please enter your OpenAI API key first');
-      return;
-    }
     if (!question || !answer) {
       alert('Please provide both a question and an answer');
       return;
@@ -99,18 +80,6 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
       <h1>Single Question Evaluator</h1>
       
       <div className="api-key-section">
-        <div className="input-group">
-          <label htmlFor="apiKey">OpenAI API Key:</label>
-          <input
-            type="password"
-            id="apiKey"
-            value={apiKey}
-            onChange={(e) => handleApiKeyChange(e.target.value)}
-            placeholder="Enter your OpenAI API key"
-            className="api-key-input"
-          />
-        </div>
-
         <div className="input-group">
           <label htmlFor="systemPrompt">System Prompt:</label>
           <textarea
@@ -202,19 +171,18 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
                   {entry.status === 'pending' && <span className="pending">Evaluating...</span>}
                   {entry.status === 'error' && <span className="error">Error processing request</span>}
                   {entry.status === 'completed' && entry.feedback && (
-                    <div className="feedback-container">
-                      <div className={`score ${entry.feedback.percentage >= 80 ? 'high' : 'low'}`}>
-                        Score: {entry.feedback.percentage}%
+                    <div className="feedback-container">                      <div className={`score ${entry.feedback?.percentage && entry.feedback.percentage >= 80 ? 'high' : 'low'}`}>
+                        Score: {entry.feedback?.percentage ?? 0}%
                       </div>
                       <div className="evaluation">
                         <h4>Main Improvement Areas:</h4>
                         <ul className="gaps-list">
-                          {entry.feedback.gaps.map((gap, index) => (
+                          {entry.feedback?.gaps?.map((gap, index) => (
                             <li key={index}>{gap}</li>
                           ))}
                         </ul>
                         <h4>Overall Feedback:</h4>
-                        <p>{entry.feedback.evaluation}</p>
+                        <p>{entry.feedback?.evaluation}</p>
                       </div>
                     </div>
                   )}
@@ -232,11 +200,13 @@ function App() {
   const basename = process.env.NODE_ENV === 'production' ? '/open-question-tester' : '';
   return (
     <BrowserRouter basename={basename}>
-      <Navigation />
-      <Routes>
-        <Route path="/" element={<SingleEntry />} />
-        <Route path="/batch" element={<BatchProcessor />} />
-      </Routes>
+      <ApiProvider>
+        <Navigation />
+        <Routes>
+          <Route path="/" element={<SingleEntry />} />
+          <Route path="/batch" element={<BatchProcessor />} />
+        </Routes>
+      </ApiProvider>
     </BrowserRouter>
   );
 }

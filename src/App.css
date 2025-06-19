@@ -222,12 +222,27 @@ li {
   margin-bottom: 1em;
 }
 
+.nav-container {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #dee2e6;
+  padding: 1rem 0;
+}
+
+.nav-container .api-key-section {
+  margin-bottom: 1rem;
+  padding: 0 1rem;
+}
+
+.nav-container .input-group {
+  max-width: 600px;
+  margin: 0 auto;
+}
+
 .navigation {
   display: flex;
   gap: 1rem;
-  margin-bottom: 2rem;
-  padding: 1rem 0;
-  border-bottom: 1px solid #dee2e6;
+  justify-content: center;
+  margin-top: 1rem;
 }
 
 .navigation a {
@@ -394,4 +409,12 @@ li {
 .summary-item.total .summary-value {
   background-color: #e2e3e5;
   color: #383d41;
+}
+
+.prompt-hint {
+  display: block;
+  font-size: 0.875rem;
+  font-weight: normal;
+  color: #666;
+  margin-top: 0.25rem;
 }

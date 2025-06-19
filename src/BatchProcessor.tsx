@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import Papa from 'papaparse';
 import { evaluateAnswer } from './api';
@@ -21,23 +21,33 @@ const ResultIcon = ({ result, matches }: { result: EvaluationResult, matches: bo
 };
 
 const defaultSystemPrompt = `You are an AI assistant helping to evaluate student answers.
-Analyze the provided answer against the question and sample solution.
-Provide a result as either "correct", "partially", or "incorrect".
-Also provide brief feedback explaining the evaluation.
-Return the response in JSON format with 'result' and 'feedback' fields.`;
+Your task is to:
+1. Compare the student's answer with the provided guidance
+2. Determine if the answer is 'correct', 'partially' correct, or 'incorrect'
+3. Provide constructive feedback explaining your evaluation
+
+Return ONLY a JSON response with this structure:
+{
+    "result": "correct" | "partially" | "incorrect",
+    "feedback": "brief explanation of the evaluation in German language, Du-Form"
+}`;
 
 export default function BatchProcessor() {
   const [results, setResults] = useState<ProcessedResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
   const [systemPrompt, setSystemPrompt] = useState(() => {
-    const saved = localStorage.getItem('system_prompt');
+    const saved = localStorage.getItem('batch_system_prompt');
     return saved || defaultSystemPrompt;
   });
+
+  useEffect(() => {
+    // Initialize OpenAI or any other setup if needed
+  }, []);
+
   const processFile = async (file: File) => {
     setIsProcessing(true);
-      Papa.parse(file, {
+    Papa.parse(file, {
       header: true,
       complete: async (results) => {
         console.log('Parsed CSV data:', results.data);
@@ -83,6 +93,7 @@ export default function BatchProcessor() {
       }
     });
   };
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -97,7 +108,7 @@ export default function BatchProcessor() {
   const handleSystemPromptChange = (prompt: string) => {
     setSystemPrompt(prompt);
     if (prompt) {
-      localStorage.setItem('system_prompt', prompt);
+      localStorage.setItem('batch_system_prompt', prompt);
     }
   };
 
@@ -107,13 +118,16 @@ export default function BatchProcessor() {
       
       <div className="api-key-section">
         <div className="input-group">
-          <label htmlFor="systemPrompt">System Prompt:</label>
+          <label htmlFor="systemPrompt">
+            System Prompt for Batch Evaluation:
+            <span className="prompt-hint">(This prompt will be used for evaluating all entries in the CSV file)</span>
+          </label>
           <textarea
             id="systemPrompt"
             value={systemPrompt}
             onChange={(e) => handleSystemPromptChange(e.target.value)}
             placeholder="Enter the system prompt for evaluation..."
-            rows={8}
+            rows={12}
             className="system-prompt-input"
           />
         </div>
@@ -131,7 +145,9 @@ export default function BatchProcessor() {
             disabled={isProcessing}
           />
         </div>
-      </div>      <div className="results-section">
+      </div>
+      
+      <div className="results-section">
         <h2>Batch Evaluation Results</h2>
         {isProcessing && <p className="processing">Processing CSV entries...</p>}
         {!isProcessing && results.length > 0 && (
