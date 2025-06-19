@@ -1,7 +1,14 @@
-question,evaluationCriteria,sampleSolution,answer
-"What is object-oriented programming?","1. Definition of OOP
-2. Key principles (encapsulation, inheritance, polymorphism)
-3. Real-world examples","Object-oriented programming is a programming paradigm that organizes code into objects, which are instances of classes. It is based on key principles like encapsulation (bundling data and methods), inheritance (creating new classes from existing ones), and polymorphism (handling objects differently based on their class).","Object-oriented programming is a way to write code using objects. Objects contain data and can do actions. You can also make new objects based on existing ones."
-"Explain the concept of recursion.","1. Clear definition
+question,answer,expectedResult,guidance
+"What is object-oriented programming?","Object-oriented programming is a way to write code using objects. Objects contain data and can do actions. You can also make new objects based on existing ones.","partially","Key points to cover:
+1. Definition of OOP as a programming paradigm
+2. Key principles: encapsulation, inheritance, polymorphism
+3. Objects as instances of classes
+
+Sample answer:
+Object-oriented programming is a programming paradigm that organizes code into objects, which are instances of classes. It is based on key principles like encapsulation (bundling data and methods), inheritance (creating new classes from existing ones), and polymorphism (handling objects differently based on their class)."
+"Explain the concept of recursion.","Recursion is when a function calls itself to solve smaller versions of the same problem. It needs a base case to stop. For example, factorial can be solved recursively.","correct","1. Clear definition
 2. Base case explanation
-3. Example of recursive problem","Recursion is a programming concept where a function calls itself to solve a problem by breaking it down into smaller, similar subproblems. Each recursive call must have a base case that stops the recursion. For example, calculating factorial: n! = n * (n-1)!","Recursion is when a function calls itself. It's like a loop that keeps going until it reaches the end. For example, you can use it to calculate factorials."
+3. Example of recursive problem","Recursion is a programming concept where a function calls itself to solve a problem by breaking it down into smaller, similar subproblems. Each recursive call must have a base case that stops the recursion. For example, calculating factorial: n! = n * (n-1)!"
+"What is the difference between HTTP and HTTPS?","HTTP is used for websites.","incorrect","1. Protocol definitions
+2. Security aspects
+3. Port differences","HTTP (Hypertext Transfer Protocol) is unencrypted, while HTTPS (HTTP Secure) uses SSL/TLS encryption to secure data transmission. HTTP uses port 80, HTTPS uses port 443. HTTPS provides authentication of websites and protects against man-in-the-middle attacks."

@@ -12,26 +12,35 @@ export function initializeOpenAI(apiKey: string) {
 
 export async function evaluateAnswer(
     question: string, 
-    evaluationCriteria: string, 
-    sampleSolution: string, 
+    guidance: string, 
+    _unused: string, 
     answer: string,
-    systemPrompt: string
+    _systemPrompt: string
 ): Promise<ApiResponse> {
     if (!openaiInstance) {
         throw new Error('OpenAI not initialized. Please enter your API key.');
     }
-    
-    try {
+      try {
         const completion = await openaiInstance.chat.completions.create({
             model: "gpt-3.5-turbo",
-            messages: [                {
+            messages: [
+                {
                     role: "system",
-                    content: systemPrompt
-                },                {
-                    role: "user",
-                    content: `Question: "${question}"
-${evaluationCriteria ? `Evaluation Criteria: "${evaluationCriteria}"` : ''}
-${sampleSolution ? `Sample Solution: "${sampleSolution}"` : ''}
+                    content: `You are an AI assistant helping to evaluate student answers.
+Analyze the provided answer against the question, evaluation criteria, and sample solution.
+Your task is to:
+1. Determine if the answer is 'correct', 'partially' correct, or 'incorrect'
+2. Provide brief, constructive feedback
+
+Return ONLY a JSON response with this structure:
+{
+    "result": "correct" | "partially" | "incorrect",
+    "feedback": "brief explanation of evaluation"
+}`
+                },
+                {
+                    role: "user",                    content: `Question: "${question}"
+${guidance ? `Evaluation and Sample Answer Guide:\n${guidance}` : ''}
 Student's Answer: "${answer}"`
                 }
             ],

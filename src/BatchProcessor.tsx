@@ -2,67 +2,76 @@ import { useState, useRef } from 'react';
 import type { ChangeEvent } from 'react';
 import Papa from 'papaparse';
 import { evaluateAnswer } from './api';
-import type { PromptEntry } from './types';
-import { v4 as uuidv4 } from 'uuid';
+import type { CsvRow, ProcessedResult, EvaluationResult } from './types';
+import { CheckCircle, XCircle, MinusCircle } from 'react-feather';
 
-interface CSVRow {
-  question: string;
-  evaluationCriteria?: string;
-  sampleSolution?: string;
-  answer: string;
-}
+// Using the CsvRow interface from types.ts
+
+const ResultIcon = ({ result, matches }: { result: EvaluationResult, matches: boolean }) => {
+  const style = { color: matches ? '#22c55e' : '#ef4444' };
+  
+  switch (result) {
+    case 'correct':
+      return <CheckCircle style={style} />;
+    case 'incorrect':
+      return <XCircle style={style} />;
+    case 'partially':
+      return <MinusCircle style={style} />;
+  }
+};
+
+const defaultSystemPrompt = `You are an AI assistant helping to evaluate student answers.
+Analyze the provided answer against the question and sample solution.
+Provide a result as either "correct", "partially", or "incorrect".
+Also provide brief feedback explaining the evaluation.
+Return the response in JSON format with 'result' and 'feedback' fields.`;
 
 export default function BatchProcessor() {
-  const [entries, setEntries] = useState<PromptEntry[]>([]);
+  const [results, setResults] = useState<ProcessedResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   
   const [systemPrompt, setSystemPrompt] = useState(() => {
     const saved = localStorage.getItem('system_prompt');
-    return saved || '';
+    return saved || defaultSystemPrompt;
   });
-
-  const processCSV = async (file: File) => {
+  const processFile = async (file: File) => {
     setIsProcessing(true);
-    
-    Papa.parse(file, {
+      Papa.parse(file, {
       header: true,
       complete: async (results) => {
-        const rows = results.data as CSVRow[];
-        const newEntries: PromptEntry[] = rows.map(row => ({
-          id: uuidv4(),
-          question: row.question,
-          evaluationCriteria: row.evaluationCriteria,
-          sampleSolution: row.sampleSolution,
-          answer: row.answer,
-          systemPrompt,
-          status: 'pending'
-        }));
+        console.log('Parsed CSV data:', results.data);
+        
+        // Filter out any empty rows
+        const rows = (results.data as CsvRow[]).filter(row => 
+          row.question && row.answer && row.expectedResult && row.guidance
+        );
+        
+        if (rows.length === 0) {
+          console.error('No valid rows found in CSV');
+          setIsProcessing(false);
+          alert('No valid data found in CSV. Please check the file format.');
+          return;
+        }
 
-        setEntries(prev => [...newEntries, ...prev]);
-
-        // Process each entry
-        for (const entry of newEntries) {
+        for (const row of rows) {
           try {
-            const result = await evaluateAnswer(
-              entry.question,
-              entry.evaluationCriteria || '',
-              entry.sampleSolution || '',
-              entry.answer,
-              entry.systemPrompt
+            const response = await evaluateAnswer(
+              row.question,
+              row.guidance,
+              '',
+              row.answer,
+              systemPrompt
             );
 
-            setEntries(prev => prev.map(e =>
-              e.id === entry.id
-                ? { ...e, status: 'completed', feedback: result }
-                : e
-            ));
+            setResults(prev => [...prev, {
+              ...row,
+              actualResult: response.result || 'incorrect',
+              feedback: response.feedback || response.evaluation || 'No feedback provided',
+              matches: (response.result || 'incorrect') === row.expectedResult
+            }]);
           } catch (error) {
-            setEntries(prev => prev.map(e =>
-              e.id === entry.id
-                ? { ...e, status: 'error' }
-                : e
-            ));
+            console.error('Error processing row:', error);
           }
         }
         setIsProcessing(false);
@@ -74,11 +83,14 @@ export default function BatchProcessor() {
       }
     });
   };
-
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
-      processCSV(file);
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        alert('Please upload a CSV file');
+        return;
+      }
+      processFile(file);
     }
   };
 
@@ -109,7 +121,8 @@ export default function BatchProcessor() {
 
       <div className="input-section">
         <div className="file-upload">
-          <p>Upload a CSV file with columns: question, evaluationCriteria (optional), sampleSolution (optional), answer</p>
+          <p>Upload a CSV file with columns: question, answer, expectedResult (correct/partially/incorrect), guidance (evaluation criteria and sample answer)</p>
+          <a href="/open-question-tester/sample.csv" className="sample-link">Download Sample CSV</a>
           <input
             type="file"
             accept=".csv"
@@ -118,58 +131,60 @@ export default function BatchProcessor() {
             disabled={isProcessing}
           />
         </div>
-      </div>
-
-      <div className="results-section">
+      </div>      <div className="results-section">
         <h2>Batch Evaluation Results</h2>
         {isProcessing && <p className="processing">Processing CSV entries...</p>}
-        <table>
-          <thead>
-            <tr>
-              <th>Question & Answer</th>
-              <th>Evaluation</th>
-            </tr>
-          </thead>
-          <tbody>
-            {entries.map(entry => (
-              <tr key={entry.id}>
-                <td>
-                  <strong>System Prompt:</strong>
-                  <p className="monospace">{entry.systemPrompt}</p>
-                  <strong>Question:</strong>
-                  <p>{entry.question}</p>
-                  <strong>Evaluation Criteria:</strong>
-                  <p>{entry.evaluationCriteria}</p>
-                  <strong>Sample Solution:</strong>
-                  <p>{entry.sampleSolution}</p>
-                  <strong>Student's Answer:</strong>
-                  <p>{entry.answer}</p>
-                </td>
-                <td>
-                  {entry.status === 'pending' && <span className="pending">Evaluating...</span>}
-                  {entry.status === 'error' && <span className="error">Error processing request</span>}
-                  {entry.status === 'completed' && entry.feedback && (
-                    <div className="feedback-container">
-                      <div className={`score ${entry.feedback.percentage >= 80 ? 'high' : 'low'}`}>
-                        Score: {entry.feedback.percentage}%
-                      </div>
-                      <div className="evaluation">
-                        <h4>Main Improvement Areas:</h4>
-                        <ul className="gaps-list">
-                          {entry.feedback.gaps.map((gap, index) => (
-                            <li key={index}>{gap}</li>
-                          ))}
-                        </ul>
-                        <h4>Overall Feedback:</h4>
-                        <p>{entry.feedback.evaluation}</p>
-                      </div>
-                    </div>
-                  )}
-                </td>
+        {!isProcessing && results.length > 0 && (
+          <div className="results-summary">
+            <div className="summary-item matches">
+              <span className="summary-label">Matches:</span>
+              <span className="summary-value">
+                {results.filter(r => r.matches).length}
+              </span>
+            </div>
+            <div className="summary-item non-matches">
+              <span className="summary-label">Non-matches:</span>
+              <span className="summary-value">
+                {results.filter(r => !r.matches).length}
+              </span>
+            </div>
+            <div className="summary-item total">
+              <span className="summary-label">Total:</span>
+              <span className="summary-value">{results.length}</span>
+            </div>
+          </div>
+        )}
+        <div className="results-table-container">
+          <table className="results-table">
+            <thead>
+              <tr>
+                <th>Question</th>
+                <th>Answer</th>
+                <th>Expected</th>
+                <th>Result</th>
+                <th>Status</th>
+                <th>Feedback</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {results.map((result, index) => (
+                <tr key={index}>
+                  <td>{result.question}</td>
+                  <td>{result.answer}</td>
+                  <td>{result.expectedResult}</td>
+                  <td>{result.actualResult}</td>
+                  <td>
+                    <ResultIcon 
+                      result={result.actualResult}
+                      matches={result.matches}
+                    />
+                  </td>
+                  <td>{result.feedback}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
