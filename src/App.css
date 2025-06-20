@@ -10,12 +10,6 @@
   gap: 1rem;
 }
 
-h1 {
-  text-align: center;
-  color: #1a1a1a;
-  margin-bottom: 1rem;
-}
-
 .api-key-section {
   background: #f8f9fa;
   padding: 1rem;
@@ -23,13 +17,16 @@ h1 {
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
-.api-key-input {
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #dee2e6;
-  border-radius: 4px;
-  font-size: 1rem;
+.api-key-input,
+.nav-api-key-input {
+  width: 160px;
+  min-width: 100px;
+  font-size: 0.95em;
+  padding: 0.3em 0.5em;
+  border: 1px solid #ccc;
+  border-radius: 3px;
   font-family: monospace;
+  margin-left: 0.5rem;
 }
 
 .input-section {
@@ -127,16 +124,6 @@ strong {
   margin-right: 0.5rem;
 }
 
-.criteria-display {
-  white-space: pre-wrap;
-  font-family: inherit;
-  background-color: #f8f9fa;
-  padding: 0.5rem;
-  border-radius: 4px;
-  margin: 0.5rem 0;
-  font-size: 0.9em;
-}
-
 .feedback-container {
   display: flex;
   flex-direction: column;
@@ -159,13 +146,6 @@ strong {
 .score.low {
   background-color: #fff3cd;
   color: #856404;
-}
-
-.factors, .gaps, .evaluation {
-  background-color: #f8f9fa;
-  padding: 1rem;
-  border-radius: 4px;
-  border: 1px solid #dee2e6;
 }
 
 h4 {
@@ -224,19 +204,15 @@ li {
   border-bottom: 1px solid #dee2e6;
 }
 
-.nav-container.nav-flex {
+.nav-container.nav-flex,
+.nav-container.nav-compact {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.5rem 0 0.5rem 0;
-  border-bottom: 1px solid #dee2e6;
-  margin-bottom: 2rem;
-}
-
-.nav-container.nav-compact {
   min-height: 40px;
   padding: 0.25rem 0 0.25rem 0;
+  border-bottom: 1px solid #dee2e6;
 }
 
 .nav-title {
@@ -287,28 +263,6 @@ li {
   border-color: #0066cc;
 }
 
-.api-key-section.nav-api-key .input-group {
-  flex-direction: row;
-  align-items: center;
-  gap: 0.5rem;
-  margin: 0;
-  max-width: none;
-}
-
-.api-key-section.nav-api-key label {
-  font-weight: 600;
-  color: #333;
-  margin-right: 0.5rem;
-  margin-bottom: 0;
-}
-
-.api-key-section.nav-api-key .api-key-input {
-  width: 180px;
-  min-width: 120px;
-  font-size: 0.95em;
-  padding: 0.5em;
-}
-
 .api-key-label {
   font-weight: 600;
   color: #333;
@@ -323,45 +277,29 @@ li {
   padding: 0.1em 0.5em;
 }
 
-.file-upload {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  border: 2px dashed #dee2e6;
-  border-radius: 4px;
-  text-align: center;
-}
-
-.file-upload.file-upload-horizontal {
+.file-upload,
+.file-upload-horizontal {
   display: flex;
   flex-direction: column;
   gap: 0.2rem;
   padding: 0.2rem 0.5rem;
   min-height: 0;
-  border-width: 1px;
+  border: 1px dashed #dee2e6;
+  border-radius: 4px;
+  text-align: center;
   font-size: 0.95em;
 }
 
-.file-upload-row {
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-}
-
 .file-upload input[type="file"] {
-  display: block;
-  margin: 1rem auto;
+  margin: 0;
+  padding: 0.1rem 0.2rem;
+  font-size: 0.95em;
+  height: 2rem;
 }
 
 .file-upload p {
   color: #666;
   margin: 0;
-}
-
-.file-upload.compact-upload {
-  min-height: unset;
-  border-width: 1px;
-  font-size: 0.95em;
 }
 
 .processing {
@@ -373,7 +311,7 @@ li {
 
 .sample-link {
   display: inline-block;
-  margin: 0.5rem 0;
+  margin: 0;
   color: #0066cc;
   text-decoration: none;
   font-weight: 500;
@@ -461,7 +399,9 @@ li {
 .results-table td:nth-child(7) { width: 25%; } /* Feedback */
 
 .clear-results-button {
-  margin: 1rem 0;
+  margin: 0;
+  height: 2.2rem;
+  align-self: flex-end;
   padding: 0.5rem 1rem;
   background-color: #ef4444;
   color: white;
@@ -476,11 +416,19 @@ li {
   background-color: #dc2626;
 }
 
+.results-summary-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  margin-bottom: 0.5rem;
+}
+
 .results-summary {
   display: flex;
   gap: 2rem;
   padding: 1rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0;
   background-color: #f8f9fa;
   border-radius: 4px;
   border: 1px solid #dee2e6;
@@ -527,17 +475,6 @@ li {
   font-weight: normal;
   color: #666;
   margin-top: 0.25rem;
-}
-
-.nav-api-key-input {
-  width: 160px;
-  min-width: 100px;
-  font-size: 0.95em;
-  padding: 0.3em 0.5em;
-  border: 1px solid #ccc;
-  border-radius: 3px;
-  font-family: monospace;
-  margin-left: 0.5rem;
 }
 
 .api-key-edit-btn {
