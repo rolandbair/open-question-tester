@@ -30,8 +30,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   });
   
   const [question, setQuestion] = useState('')
-  const [evaluationCriteria, setEvaluationCriteria] = useState('')
-  const [sampleSolution, setSampleSolution] = useState('')
+  const [guidance, setGuidance] = useState('')
   const [answer, setAnswer] = useState('')
   const [entries, setEntries] = useState<PromptEntry[]>([])
 
@@ -51,8 +50,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
     const newEntry: PromptEntry = {
       id: uuidv4(),
       question,
-      evaluationCriteria,
-      sampleSolution,
+      guidance,
       answer,
       systemPrompt,
       status: 'pending'
@@ -61,7 +59,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
     setEntries(prev => [newEntry, ...prev])
 
     try {
-      const result = await evaluateAnswer(question, evaluationCriteria, sampleSolution, answer, systemPrompt)
+      const result = await evaluateAnswer(question, guidance, '', answer, systemPrompt)
       setEntries(prev => prev.map(entry =>
         entry.id === newEntry.id
           ? { ...entry, status: 'completed', feedback: result }
@@ -105,24 +103,13 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
         </div>
 
         <div className="input-group">
-          <label htmlFor="evaluationCriteria">Evaluation Criteria:</label>
+          <label htmlFor="guidance">Guidance (Evaluation Criteria and/or Sample Solution):</label>
           <textarea
-            id="evaluationCriteria"
-            value={evaluationCriteria}
-            onChange={(e) => setEvaluationCriteria(e.target.value)}
-            placeholder="(Optional) Enter the evaluation criteria that will be used to assess the answer..."
-            rows={4}
-          />
-        </div>
-
-        <div className="input-group">
-          <label htmlFor="sampleSolution">Sample Solution:</label>
-          <textarea
-            id="sampleSolution"
-            value={sampleSolution}
-            onChange={(e) => setSampleSolution(e.target.value)}
-            placeholder="(Optional) Enter the sample solution for terminology reference..."
-            rows={4}
+            id="guidance"
+            value={guidance}
+            onChange={(e) => setGuidance(e.target.value)}
+            placeholder="Enter evaluation criteria, sample solution, or both..."
+            rows={5}
           />
         </div>
 
@@ -159,10 +146,8 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
                   <p className="monospace">{entry.systemPrompt}</p>
                   <strong>Question:</strong>
                   <p>{entry.question}</p>
-                  <strong>Evaluation Criteria:</strong>
-                  <p>{entry.evaluationCriteria}</p>
-                  <strong>Sample Solution:</strong>
-                  <p>{entry.sampleSolution}</p>
+                  <strong>Guidance:</strong>
+                  <p>{entry.guidance}</p>
                   <strong>Student's Answer:</strong>
                   <p>{entry.answer}</p>
                 </td>
