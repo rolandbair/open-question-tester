@@ -67,7 +67,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
           ? { ...entry, status: 'completed', feedback: result }
           : entry
       ))
-    } catch (error) {
+    } catch {
       setEntries(prev => prev.map(entry =>
         entry.id === newEntry.id
           ? { ...entry, status: 'error' }

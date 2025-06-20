@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import type { ApiResponse } from './types';
+import type { ChatCompletionMessageParam } from 'openai/resources/chat';
 
 let openaiInstance: OpenAI | null = null;
 
@@ -15,40 +16,34 @@ export async function evaluateAnswer(
     guidance: string, 
     _unused: string, 
     answer: string,
-    _systemPrompt: string
+    systemPrompt: string // <-- use this instead of _systemPrompt
 ): Promise<ApiResponse> {
     if (!openaiInstance) {
         throw new Error('OpenAI not initialized. Please enter your API key.');
     }
       try {
-        const completion = await openaiInstance.chat.completions.create({
-            model: "gpt-3.5-turbo",
-            messages: [
-                {
-                    role: "system",
-                    content: `You are an AI assistant helping to evaluate student answers.
-Analyze the provided answer against the question, evaluation criteria, and sample solution.
-Your task is to:
-1. Determine if the answer is 'correct', 'partially' correct, or 'incorrect'
-2. Provide brief, constructive feedback
-
-Return ONLY a JSON response with this structure:
-{
-    "result": "correct" | "partially" | "incorrect",
-    "feedback": "brief explanation of evaluation"
-}`
-                },
-                {
-                    role: "user",                    content: `Question: "${question}"
+        const messages: ChatCompletionMessageParam[] = [
+            {
+                role: "system",
+                content: systemPrompt // <-- use the provided prompt
+            },
+            {
+                role: "user",
+                content: `Question: "${question}"
 ${guidance ? `Evaluation and Sample Answer Guide:\n${guidance}` : ''}
 Student's Answer: "${answer}"`
-                }
-            ],
+            }
+        ];
+        const requestPayload = {
+            model: "gpt-3.5-turbo",
+            messages,
             temperature: 0.7,
-            response_format: { type: "json_object" }
-        });
-
+            response_format: { type: "json_object" as const }
+        };
+        console.log('[OpenAI API] Request:', JSON.stringify(requestPayload, null, 2));
+        const completion = await openaiInstance.chat.completions.create(requestPayload);
         const response = completion.choices[0].message.content;
+        console.log('[OpenAI API] Response:', response);
         if (!response) {
             throw new Error('No response received from API');
         }
