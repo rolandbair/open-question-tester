@@ -59,7 +59,14 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
     setEntries(prev => [newEntry, ...prev])
 
     try {
+      console.log('[Single Mode] Request:', {
+        question,
+        guidance,
+        answer,
+        systemPrompt
+      });
       const result = await evaluateAnswer(question, guidance, '', answer, systemPrompt)
+      console.log('[Single Mode] Response:', result);
       setEntries(prev => prev.map(entry =>
         entry.id === newEntry.id
           ? { ...entry, status: 'completed', feedback: result }
