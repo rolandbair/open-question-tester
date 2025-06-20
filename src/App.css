@@ -318,7 +318,7 @@ li {
 .results-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.875rem;
+  font-size: 10px;
   line-height: 1.4;
 }
 
@@ -346,25 +346,44 @@ li {
 
 /* Column widths */
 .results-table th:nth-child(1),
-.results-table td:nth-child(1) { width: 20%; } /* Question */
+.results-table td:nth-child(1) { width: 15%; } /* Question */
 
 .results-table th:nth-child(2),
-.results-table td:nth-child(2) { width: 25%; } /* Answer */
+.results-table td:nth-child(2) { width: 20%; } /* Answer */
 
 .results-table th:nth-child(3),
-.results-table td:nth-child(3) { width: 10%; } /* Expected */
+.results-table td:nth-child(3) { width: 20%; } /* Guidance */
 
 .results-table th:nth-child(4),
-.results-table td:nth-child(4) { width: 10%; } /* Result */
+.results-table td:nth-child(4) { width: 8%; } /* Expected */
 
 .results-table th:nth-child(5),
-.results-table td:nth-child(5) { 
-  width: 5%; 
+.results-table td:nth-child(5) { width: 8%; } /* Result */
+
+.results-table th:nth-child(6),
+.results-table td:nth-child(6) { 
+  width: 4%; 
   text-align: center;
 } /* Status */
 
-.results-table th:nth-child(6),
-.results-table td:nth-child(6) { width: 30%; } /* Feedback */
+.results-table th:nth-child(7),
+.results-table td:nth-child(7) { width: 25%; } /* Feedback */
+
+.clear-results-button {
+  margin: 1rem 0;
+  padding: 0.5rem 1rem;
+  background-color: #ef4444;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.clear-results-button:hover {
+  background-color: #dc2626;
+}
 
 .results-summary {
   display: flex;

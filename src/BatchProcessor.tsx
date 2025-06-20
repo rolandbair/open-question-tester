@@ -112,6 +112,10 @@ export default function BatchProcessor() {
     }
   };
 
+  const handleClearResults = () => {
+    setResults([]);
+  };
+
   return (
     <div className="container">
       <h1>Batch Question Evaluator</h1>
@@ -151,24 +155,32 @@ export default function BatchProcessor() {
         <h2>Batch Evaluation Results</h2>
         {isProcessing && <p className="processing">Processing CSV entries...</p>}
         {!isProcessing && results.length > 0 && (
-          <div className="results-summary">
-            <div className="summary-item matches">
-              <span className="summary-label">Matches:</span>
-              <span className="summary-value">
-                {results.filter(r => r.matches).length}
-              </span>
+          <>
+            <div className="results-summary">
+              <div className="summary-item matches">
+                <span className="summary-label">Matches:</span>
+                <span className="summary-value">
+                  {results.filter(r => r.matches).length}
+                </span>
+              </div>
+              <div className="summary-item non-matches">
+                <span className="summary-label">Non-matches:</span>
+                <span className="summary-value">
+                  {results.filter(r => !r.matches).length}
+                </span>
+              </div>
+              <div className="summary-item total">
+                <span className="summary-label">Total:</span>
+                <span className="summary-value">{results.length}</span>
+              </div>
             </div>
-            <div className="summary-item non-matches">
-              <span className="summary-label">Non-matches:</span>
-              <span className="summary-value">
-                {results.filter(r => !r.matches).length}
-              </span>
-            </div>
-            <div className="summary-item total">
-              <span className="summary-label">Total:</span>
-              <span className="summary-value">{results.length}</span>
-            </div>
-          </div>
+            <button 
+              onClick={handleClearResults}
+              className="clear-results-button"
+            >
+              Clear Results
+            </button>
+          </>
         )}
         <div className="results-table-container">
           <table className="results-table">
@@ -176,6 +188,7 @@ export default function BatchProcessor() {
               <tr>
                 <th>Question</th>
                 <th>Answer</th>
+                <th>Guidance</th>
                 <th>Expected</th>
                 <th>Result</th>
                 <th>Status</th>
@@ -187,6 +200,7 @@ export default function BatchProcessor() {
                 <tr key={index}>
                   <td>{result.question}</td>
                   <td>{result.answer}</td>
+                  <td>{result.guidance}</td>
                   <td>{result.expectedResult}</td>
                   <td>{result.actualResult}</td>
                   <td>
