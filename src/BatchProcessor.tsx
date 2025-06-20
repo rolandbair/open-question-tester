@@ -118,8 +118,6 @@ export default function BatchProcessor() {
 
   return (
     <div className="container">
-      <h1>Batch Question Evaluator</h1>
-      
       <div className="api-key-section">
         <div className="input-group">
           <label htmlFor="systemPrompt">
@@ -131,23 +129,25 @@ export default function BatchProcessor() {
             value={systemPrompt}
             onChange={(e) => handleSystemPromptChange(e.target.value)}
             placeholder="Enter the system prompt for evaluation..."
-            rows={12}
+            rows={18}
             className="system-prompt-input"
           />
         </div>
       </div>
 
       <div className="input-section">
-        <div className="file-upload">
+        <div className="file-upload compact-upload file-upload-horizontal">
           <p>Upload a CSV file with columns: question, answer, expectedResult (correct/partially/incorrect), guidance (evaluation criteria and sample answer)</p>
-          <a href="/open-question-tester/sample.csv" className="sample-link">Download Sample CSV</a>
-          <input
-            type="file"
-            accept=".csv"
-            onChange={handleFileChange}
-            ref={fileInputRef}
-            disabled={isProcessing}
-          />
+          <div className="file-upload-row">
+            <a href="/open-question-tester/sample.csv" className="sample-link">Download Sample CSV</a>
+            <input
+              type="file"
+              accept=".csv"
+              onChange={handleFileChange}
+              ref={fileInputRef}
+              disabled={isProcessing}
+            />
+          </div>
         </div>
       </div>
       
@@ -155,7 +155,7 @@ export default function BatchProcessor() {
         <h2>Batch Evaluation Results</h2>
         {isProcessing && <p className="processing">Processing CSV entries...</p>}
         {!isProcessing && results.length > 0 && (
-          <>
+          <div className="results-summary-row">
             <div className="results-summary">
               <div className="summary-item matches">
                 <span className="summary-label">Matches:</span>
@@ -180,9 +180,9 @@ export default function BatchProcessor() {
             >
               Clear Results
             </button>
-          </>
+          </div>
         )}
-        <div className="results-table-container">
+        <div className="results-table-container full-width-table">
           <table className="results-table">
             <thead>
               <tr>

@@ -7,7 +7,7 @@
 .container {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1rem;
 }
 
 h1 {
@@ -17,7 +17,6 @@ h1 {
 }
 
 .api-key-section {
-  margin-bottom: 2rem;
   background: #f8f9fa;
   padding: 1rem;
   border-radius: 8px;
@@ -36,9 +35,7 @@ h1 {
 .input-section {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
   background: #f8f9fa;
-  padding: 2rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
@@ -223,53 +220,132 @@ li {
 }
 
 .nav-container {
-  margin-bottom: 2rem;
-  border-bottom: 1px solid #dee2e6;
-  padding: 1rem 0;
-}
-
-.nav-container .api-key-section {
   margin-bottom: 1rem;
-  padding: 0 1rem;
+  border-bottom: 1px solid #dee2e6;
 }
 
-.nav-container .input-group {
-  max-width: 600px;
-  margin: 0 auto;
-}
-
-.navigation {
+.nav-container.nav-flex {
   display: flex;
+  align-items: center;
+  justify-content: space-between;
   gap: 1rem;
-  justify-content: center;
-  margin-top: 1rem;
+  padding: 0.5rem 0 0.5rem 0;
+  border-bottom: 1px solid #dee2e6;
+  margin-bottom: 2rem;
 }
 
-.navigation a {
+.nav-container.nav-compact {
+  min-height: 40px;
+  padding: 0.25rem 0 0.25rem 0;
+}
+
+.nav-title {
+  flex: 1 1 0;
+  font-size: 1.3rem;
+  font-weight: bold;
+  color: #1a1a1a;
+  text-align: left;
+  padding-left: 1rem;
+}
+
+.nav-center {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}
+
+.nav-api-key {
+  flex: 1 1 0;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-right: 1rem;
+}
+
+.nav-buttons {
+  gap: 0.5rem;
+}
+
+.nav-btn {
+  background: #f0f2f5;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  padding: 0.4rem 1.2rem;
+  font-size: 1rem;
   color: #333;
   text-decoration: none;
-  padding: 0.5rem 1rem;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  font-weight: 500;
+  transition: background 0.2s, color 0.2s;
+  margin: 0 0.2rem;
+  display: inline-block;
 }
 
-.navigation a:hover {
-  background-color: #f0f2f5;
+.nav-btn.active, .nav-btn:hover {
+  background: #0066cc;
+  color: #fff;
+  border-color: #0066cc;
 }
 
-.navigation a.active {
-  background-color: #0066cc;
-  color: white;
+.api-key-section.nav-api-key .input-group {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  max-width: none;
+}
+
+.api-key-section.nav-api-key label {
+  font-weight: 600;
+  color: #333;
+  margin-right: 0.5rem;
+  margin-bottom: 0;
+}
+
+.api-key-section.nav-api-key .api-key-input {
+  width: 180px;
+  min-width: 120px;
+  font-size: 0.95em;
+  padding: 0.5em;
+}
+
+.api-key-label {
+  font-weight: 600;
+  color: #333;
+}
+
+.api-key-value {
+  font-family: monospace;
+  letter-spacing: 2px;
+  color: #888;
+  background: #f8f8f8;
+  border-radius: 3px;
+  padding: 0.1em 0.5em;
 }
 
 .file-upload {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1rem;
+  gap: 0.5rem;
   border: 2px dashed #dee2e6;
   border-radius: 4px;
   text-align: center;
+}
+
+.file-upload.file-upload-horizontal {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  padding: 0.2rem 0.5rem;
+  min-height: 0;
+  border-width: 1px;
+  font-size: 0.95em;
+}
+
+.file-upload-row {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
 }
 
 .file-upload input[type="file"] {
@@ -280,6 +356,12 @@ li {
 .file-upload p {
   color: #666;
   margin: 0;
+}
+
+.file-upload.compact-upload {
+  min-height: unset;
+  border-width: 1px;
+  font-size: 0.95em;
 }
 
 .processing {
@@ -307,6 +389,15 @@ li {
   margin-top: 20px;
   border: 1px solid #dee2e6;
   border-radius: 4px;
+}
+
+.results-table-container.full-width-table {
+  width: 100vw;
+  max-width: none;
+  margin-left: calc(-1 * (100vw - 100%) / 2);
+  border-radius: 0;
+  border-left: none;
+  border-right: none;
 }
 
 .results-table td svg {
@@ -436,4 +527,31 @@ li {
   font-weight: normal;
   color: #666;
   margin-top: 0.25rem;
+}
+
+.nav-api-key-input {
+  width: 160px;
+  min-width: 100px;
+  font-size: 0.95em;
+  padding: 0.3em 0.5em;
+  border: 1px solid #ccc;
+  border-radius: 3px;
+  font-family: monospace;
+  margin-left: 0.5rem;
+}
+
+.api-key-edit-btn {
+  background: none;
+  border: none;
+  margin-left: 0.3rem;
+  cursor: pointer;
+  color: #888;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  transition: color 0.2s;
+}
+
+.api-key-edit-btn:hover {
+  color: #0066cc;
 }

@@ -77,7 +77,6 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   }
   return (
     <div className="container">
-      <h1>Single Question Evaluator</h1>
       
       <div className="api-key-section">
         <div className="input-group">
