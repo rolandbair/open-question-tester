@@ -64,7 +64,8 @@ export default function BatchProcessor() {
           return;
         }
 
-        for (const row of rows) {
+        // Run all evaluations in parallel
+        const promises = rows.map(async (row) => {
           try {
             const response = await evaluateAnswer(
               row.question,
@@ -73,17 +74,24 @@ export default function BatchProcessor() {
               row.answer,
               systemPrompt
             );
-
-            setResults(prev => [...prev, {
+            return {
               ...row,
               actualResult: response.result || 'incorrect',
               feedback: response.feedback || response.evaluation || 'No feedback provided',
               matches: (response.result || 'incorrect') === row.expectedResult
-            }]);
+            };
           } catch (error) {
             console.error('Error processing row:', error);
+            return {
+              ...row,
+              actualResult: 'incorrect' as EvaluationResult,
+              feedback: 'Error processing row',
+              matches: false
+            };
           }
-        }
+        });
+        const allResults = await Promise.all(promises);
+        setResults(allResults);
         setIsProcessing(false);
       },
       error: (error) => {
@@ -138,16 +146,14 @@ export default function BatchProcessor() {
       <div className="input-section">
         <div className="file-upload compact-upload file-upload-horizontal">
           <p>Upload a CSV file with columns: question, answer, expectedResult (correct/partially/incorrect), guidance (evaluation criteria and sample answer)</p>
-          <div className="file-upload-row">
-            <a href="/open-question-tester/sample.csv" className="sample-link">Download Sample CSV</a>
-            <input
-              type="file"
-              accept=".csv"
-              onChange={handleFileChange}
-              ref={fileInputRef}
-              disabled={isProcessing}
-            />
-          </div>
+          <a href="/open-question-tester/sample.csv" className="sample-link">Download Sample CSV</a>
+          <input
+            type="file"
+            accept=".csv"
+            onChange={handleFileChange}
+            ref={fileInputRef}
+            disabled={isProcessing}
+          />
         </div>
       </div>
       
