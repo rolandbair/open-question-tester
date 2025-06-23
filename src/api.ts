@@ -35,9 +35,8 @@ Student's Answer: "${answer}"`
             }
         ];
         const requestPayload = {
-            model: "gpt-3.5-turbo",
+            model: "o3-2025-04-16",
             messages,
-            temperature: 0.7,
             response_format: { type: "json_object" as const }
         };
         console.log('[OpenAI API] Request:', JSON.stringify(requestPayload, null, 2));
