@@ -29,9 +29,25 @@ Positively evaluate insufficient enumerations.
 
 Return ONLY a JSON response with this structure:
 {
-"result": "correct" | "partially" | "incorrect",
-"feedback": "feedback in {Language}"
-}`;
+"type": {
+    "type": "string",
+    "enum": ["openQuestionFeedback"]
+},
+"feedback": {
+    "type": "string",
+    "description": "The feedback and evaluation of the provided answer"
+},              
+"result": {
+    "type": "string",
+    "enum": ["correct", "partially", "incorrect"]
+},
+"emoji": {
+    "type": "string",
+    "description": "An emoji visualizing the result",
+    "enum": ["👍", "👉", "👎"]
+} 
+}
+`;
 
 export default function BatchProcessor() {
   const [results, setResults] = useState<ProcessedResult[]>([]);
