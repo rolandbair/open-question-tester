@@ -13,7 +13,7 @@
 - Always push changes to the remote repository after committing
 - Use descriptive commit messages that explain the changes
 - Basic workflow:
-  1. `git add <files>`
+  1. `git add .`
   2. `git commit -m "descriptive message"`
   3. `git push`
 

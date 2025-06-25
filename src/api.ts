@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { ApiResponse, AggregatedApiResponse, EvaluationResult } from './types';
+import type { ApiResponse } from './types';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
 
 let openaiInstance: OpenAI | null = null;
