@@ -68,3 +68,34 @@ Student's Answer: "${answer}"`
         throw error;
     }
 }
+
+export async function checkFeedbackCriterion(
+  question: string,
+  answer: string,
+  feedback: string,
+  criterion: { name: string; description: string },
+  systemPrompt = 'You are an expert evaluator for open question feedback. For the following question, answer, and feedback, check if the feedback meets the criterion described. Respond ONLY with a JSON object: { "passed": true | false, "explanation": string }'
+): Promise<{ passed: boolean, explanation: string }> {
+  if (!openaiInstance) {
+    const storedKey = localStorage.getItem('openai_api_key');
+    if (storedKey) {
+      initializeOpenAI(storedKey);
+    }
+  }
+  if (!openaiInstance) {
+    throw new Error('OpenAI not initialized. Please enter your API key.');
+  }
+  const messages: ChatCompletionMessageParam[] = [
+    { role: 'system', content: systemPrompt },
+    { role: 'user', content: `Criterion: ${criterion.name}\nDescription: ${criterion.description}\n\nQuestion: ${question}\nAnswer: ${answer}\nFeedback: ${feedback}` }
+  ];
+  const requestPayload = {
+    model: "o3-2025-04-16",
+    messages,
+    response_format: { type: "json_object" as const }
+  };
+  const completion = await openaiInstance!.chat.completions.create(requestPayload);
+  const response = completion.choices[0].message.content;
+  if (!response) throw new Error('No response from LLM');
+  return JSON.parse(response);
+}

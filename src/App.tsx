@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
 import type { PromptEntry, ApiResponse } from './types';
-import { evaluateAnswer } from './api';
+import { evaluateAnswer, checkFeedbackCriterion } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import Navigation from './Navigation';
-import BatchProcessor from './BatchProcessor';
+import BatchProcessor, { CriteriaSettingsPanel } from './BatchProcessor';
 import { ApiProvider } from './ApiContext';
 
 function SingleEntry() {
@@ -34,6 +34,11 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   const [answer, setAnswer] = useState('')
   const [requestCount, setRequestCount] = useState(1)
   const [entries, setEntries] = useState<PromptEntry[]>([])
+  // Criteria state for single mode (same as batch)
+  const [criteria, setCriteria] = useState([
+    { name: 'Encouraging', description: 'The feedback should be encouraging and supportive.' },
+    { name: 'No Solution Given Away', description: 'The feedback should not directly give away the correct solution.' }
+  ]);
 
   const handleSystemPromptChange = (prompt: string) => {
     setSystemPrompt(prompt);
@@ -67,10 +72,26 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
           requestCount
         });
         const result = await evaluateAnswer(question, guidance, '', answer, systemPrompt, 1) as ApiResponse;
-        console.log('[Single Mode] Response:', result);
+        // LLM-based criteria checks for single mode (only if criteria present)
+        let criteriaChecks = undefined;
+        if (criteria && Array.isArray(criteria) && criteria.length > 0) {
+          criteriaChecks = await Promise.all(criteria.map(async (c: any) => {
+            try {
+              const check = await checkFeedbackCriterion(
+                question,
+                answer,
+                result.feedback || result.evaluation || '',
+                c
+              );
+              return { name: c.name, passed: check.passed, explanation: check.explanation };
+            } catch (e) {
+              return { name: c.name, passed: null, explanation: 'Error' };
+            }
+          }));
+        }
         setEntries(prev => prev.map(entry =>
           entry.id === newEntry.id
-            ? { ...entry, status: 'completed', feedback: result }
+            ? { ...entry, status: 'completed', feedback: result, criteriaChecks }
             : entry
         ));
       } catch (error) {
@@ -105,10 +126,29 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
         });
         const results = await evaluateAnswer(question, guidance, '', answer, systemPrompt, requestCount) as ApiResponse[];
         console.log('[Single Mode] Response:', results);
+        // LLM-based criteria checks for each result (only if criteria present)
+        let allCriteriaChecks: any[] = [];
+        if (criteria && Array.isArray(criteria) && criteria.length > 0) {
+          allCriteriaChecks = await Promise.all(results.map(async (result) => {
+            return Promise.all(criteria.map(async (c: any) => {
+              try {
+                const check = await checkFeedbackCriterion(
+                  question,
+                  answer,
+                  result.feedback || result.evaluation || '',
+                  c
+                );
+                return { name: c.name, passed: check.passed, explanation: check.explanation };
+              } catch (e) {
+                return { name: c.name, passed: null, explanation: 'Error' };
+              }
+            }));
+          }));
+        }
         setEntries(prev => prev.map(entry => {
           const idx = ids.indexOf(entry.id);
           if (idx !== -1) {
-            return { ...entry, status: 'completed', feedback: results[idx] };
+            return { ...entry, status: 'completed', feedback: results[idx], criteriaChecks: allCriteriaChecks[idx] };
           }
           return entry;
         }));
@@ -137,6 +177,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
             className="system-prompt-input"
           />
         </div>
+        <CriteriaSettingsPanel criteria={criteria} setCriteria={setCriteria} />
       </div>
 
       <div className="input-section">
@@ -221,6 +262,18 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
                     <div className="feedback-container">
                       <div className={`result-pill ${entry.feedback.result}`}>{entry.feedback.result}</div>
                       <div className="feedback-text">{entry.feedback.feedback}</div>
+                      {entry.criteriaChecks && (
+                        <div className="criteria-checks">
+                          {entry.criteriaChecks.map((c, i) => (
+                            <span key={i} style={{ marginRight: 8 }}>
+                              {c.passed === true && '✔️'}
+                              {c.passed === false && '❌'}
+                              {c.passed === null && '⏳'}
+                              {' '}{c.name}
+                            </span>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </td>

@@ -24,6 +24,7 @@ export interface PromptEntry {
     systemPrompt: string;
     status: 'pending' | 'completed' | 'error';
     feedback?: ApiResponse;
+    criteriaChecks?: { name: string; passed: boolean | null; explanation?: string }[];
 }
 
 export interface CsvRow {
@@ -38,4 +39,5 @@ export interface ProcessedResult extends CsvRow {
     feedback: string;
     emoji?: '👍' | '👉' | '👎';
     matches: boolean;
+    criteriaChecks?: { name: string; passed: boolean | null }[];
 }

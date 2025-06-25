@@ -1,7 +1,7 @@
-import { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import Papa from 'papaparse';
-import { evaluateAnswer } from './api';
+import { evaluateAnswer, checkFeedbackCriterion } from './api';
 import type { CsvRow, ProcessedResult, EvaluationResult, ApiResponse } from './types';
 import { CheckCircle, XCircle, MinusCircle } from 'react-feather';
 
@@ -49,6 +49,48 @@ Return ONLY a JSON response with this structure:
 }
 `;
 
+// Move FEEDBACK_CRITERIA to state for user editing
+// const [criteria, setCriteria] = useState([
+//   { name: 'Encouraging', description: 'The feedback should be encouraging and supportive.' },
+//   { name: 'No Solution Given Away', description: 'The feedback should not directly give away the correct solution.' }
+// ]);
+
+export function CriteriaSettingsPanel({ criteria, setCriteria }: { criteria: any[], setCriteria: (c: any[]) => void }) {
+  const [jsonValue, setJsonValue] = useState(() => JSON.stringify(criteria, null, 2));
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setJsonValue(e.target.value);
+    try {
+      const parsed = JSON.parse(e.target.value);
+      if (Array.isArray(parsed)) {
+        setCriteria(parsed);
+        setError(null);
+      } else {
+        setError('JSON must be an array of criteria objects.');
+      }
+    } catch (err) {
+      setError('Invalid JSON');
+    }
+  };
+
+  return (
+    <div className="criteria-settings-panel">
+      <label>Feedback Criteria (JSON):</label>
+      <textarea
+        rows={8}
+        style={{ width: '100%', fontFamily: 'monospace' }}
+        value={jsonValue}
+        onChange={handleChange}
+      />
+      {error && <div style={{ color: 'red' }}>{error}</div>}
+      <div style={{ fontSize: '0.9em', color: '#666' }}>
+        Example: <code>{`[{"name":"Encouraging","description":"The feedback should be encouraging."}]`}</code>
+      </div>
+    </div>
+  );
+}
+
 export default function BatchProcessor() {
   const [results, setResults] = useState<ProcessedResult[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,6 +100,10 @@ export default function BatchProcessor() {
     return saved || defaultSystemPrompt;
   });
   const [lastFile, setLastFile] = useState<File | null>(null);
+  const [criteria, setCriteria] = useState([
+    { name: 'Encouraging', description: 'The feedback should be encouraging and supportive.' },
+    { name: 'No Solution Given Away', description: 'The feedback should not directly give away the correct solution.' }
+  ]);
 
   useEffect(() => {
     // Initialize OpenAI or any other setup if needed
@@ -98,12 +144,32 @@ export default function BatchProcessor() {
               systemPrompt,
               1 // always single result for batch
             ) as ApiResponse;
+
+            // LLM-based criteria checks (only if criteria present)
+            let criteriaChecks = undefined;
+            if (criteria && Array.isArray(criteria) && criteria.length > 0) {
+              criteriaChecks = await Promise.all(criteria.map(async (c: any) => {
+                try {
+                  const check = await checkFeedbackCriterion(
+                    row.question,
+                    row.answer,
+                    response.feedback || response.evaluation || '',
+                    c
+                  );
+                  return { name: c.name, passed: check.passed, explanation: check.explanation };
+                } catch (e) {
+                  return { name: c.name, passed: null, explanation: 'Error' };
+                }
+              }));
+            }
             return {
               ...row,
               actualResult: response.result || 'incorrect',
               feedback: (response.emoji ? response.emoji + ' ' : '') + (response.feedback || response.evaluation || 'No feedback provided'),
               emoji: response.emoji,
               matches: (response.result || 'incorrect') === row.expectedResult
+              // Only add criteriaChecks if defined
+              , ...(criteriaChecks !== undefined ? { criteriaChecks } : {})
             };
           } catch (error) {
             console.error('Error processing row:', error);
@@ -174,6 +240,7 @@ export default function BatchProcessor() {
             className="system-prompt-input"
           />
         </div>
+        <CriteriaSettingsPanel criteria={criteria} setCriteria={setCriteria} />
       </div>
 
       <div className="input-section">
@@ -245,6 +312,7 @@ export default function BatchProcessor() {
                 <th>Result</th>
                 <th>Status</th>
                 <th>Feedback</th>
+                <th>Criteria</th>
               </tr>
             </thead>
             <tbody>
@@ -262,6 +330,16 @@ export default function BatchProcessor() {
                     />
                   </td>
                   <td>{result.feedback}</td>
+                  <td>
+                    {result.criteriaChecks && result.criteriaChecks.map((c, i) => (
+                      <span key={i} style={{ marginRight: 8 }}>
+                        {c.passed === true && '✔️'}
+                        {c.passed === false && '❌'}
+                        {c.passed === null && '⏳'}
+                        {' '}{c.name}
+                      </span>
+                    ))}
+                  </td>
                 </tr>
               ))}
             </tbody>
