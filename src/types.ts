@@ -9,6 +9,10 @@ export interface ApiResponse {
     feedback?: string;
 }
 
+export interface AggregatedApiResponse extends ApiResponse {
+    individualResults?: ApiResponse[];
+}
+
 export interface PromptEntry {
     id: string;
     question: string;

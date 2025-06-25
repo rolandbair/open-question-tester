@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import type { ChangeEvent } from 'react';
 import Papa from 'papaparse';
 import { evaluateAnswer } from './api';
-import type { CsvRow, ProcessedResult, EvaluationResult } from './types';
+import type { CsvRow, ProcessedResult, EvaluationResult, ApiResponse } from './types';
 import { CheckCircle, XCircle, MinusCircle } from 'react-feather';
 
 // Using the CsvRow interface from types.ts
@@ -72,8 +72,9 @@ export default function BatchProcessor() {
               row.guidance,
               '',
               row.answer,
-              systemPrompt
-            );
+              systemPrompt,
+              1 // always single result for batch
+            ) as ApiResponse;
             return {
               ...row,
               actualResult: response.result || 'incorrect',

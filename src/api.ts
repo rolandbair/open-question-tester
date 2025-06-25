@@ -1,5 +1,5 @@
 import OpenAI from 'openai';
-import type { ApiResponse } from './types';
+import type { ApiResponse, AggregatedApiResponse, EvaluationResult } from './types';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
 
 let openaiInstance: OpenAI | null = null;
@@ -16,16 +16,24 @@ export async function evaluateAnswer(
     guidance: string, 
     _unused: string, 
     answer: string,
-    systemPrompt: string // <-- use this instead of _systemPrompt
-): Promise<ApiResponse> {
+    systemPrompt: string,
+    count: number = 1 // Number of parallel evaluations to run
+): Promise<ApiResponse | ApiResponse[]> {
+    if (!openaiInstance) {
+        // Try to initialize from localStorage if possible
+        const storedKey = localStorage.getItem('openai_api_key');
+        if (storedKey) {
+            initializeOpenAI(storedKey);
+        }
+    }
     if (!openaiInstance) {
         throw new Error('OpenAI not initialized. Please enter your API key.');
     }
-      try {
+    try {
         const messages: ChatCompletionMessageParam[] = [
             {
                 role: "system",
-                content: systemPrompt // <-- use the provided prompt
+                content: systemPrompt
             },
             {
                 role: "user",
@@ -39,15 +47,22 @@ Student's Answer: "${answer}"`
             messages,
             response_format: { type: "json_object" as const }
         };
-        console.log('[OpenAI API] Request:', JSON.stringify(requestPayload, null, 2));
-        const completion = await openaiInstance.chat.completions.create(requestPayload);
-        const response = completion.choices[0].message.content;
-        console.log('[OpenAI API] Response:', response);
-        if (!response) {
-            throw new Error('No response received from API');
-        }
 
-        return JSON.parse(response) as ApiResponse;
+        // Create array of promises for parallel execution
+        const promises = Array(count).fill(null).map(async () => {
+            console.log('[OpenAI API] Request:', JSON.stringify(requestPayload, null, 2));
+            const completion = await openaiInstance!.chat.completions.create(requestPayload);
+            const response = completion.choices[0].message.content;
+            console.log('[OpenAI API] Response:', response);
+            if (!response) {
+                throw new Error('No response received from API');
+            }
+            return JSON.parse(response) as ApiResponse;
+        });
+
+        // Wait for all requests to complete
+        const results = await Promise.all(promises);
+        return count === 1 ? results[0] : results;
     } catch (error) {
         console.error('Error calling OpenAI API:', error);
         throw error;

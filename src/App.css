@@ -43,6 +43,13 @@
   gap: 0.5rem;
 }
 
+.input-group-inline {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin: 1rem 0;
+}
+
 label {
   font-weight: 600;
   color: #333;
@@ -491,4 +498,54 @@ li {
 
 .api-key-edit-btn:hover {
   color: #0066cc;
+}
+
+.number-input {
+  width: 5rem;
+  padding: 0.4rem;
+  border: 1px solid #dee2e6;
+  border-radius: 4px;
+  font-size: 1rem;
+}
+
+.input-hint {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.individual-results {
+  margin: 1rem 0;
+  padding: 1rem;
+  background: #f8f9fa;
+  border-radius: 4px;
+}
+
+.result-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.result-pill {
+  padding: 0.3rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  cursor: help;
+}
+
+.result-pill.correct {
+  background: #d4edda;
+  color: #155724;
+}
+
+.result-pill.partially {
+  background: #fff3cd;
+  color: #856404;
+}
+
+.result-pill.incorrect {
+  background: #f8d7da;
+  color: #721c24;
 }

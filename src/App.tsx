@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import './App.css';
-import type { PromptEntry } from './types';
+import type { PromptEntry, ApiResponse } from './types';
 import { evaluateAnswer } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import Navigation from './Navigation';
@@ -32,6 +32,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   const [question, setQuestion] = useState('')
   const [guidance, setGuidance] = useState('')
   const [answer, setAnswer] = useState('')
+  const [requestCount, setRequestCount] = useState(1)
   const [entries, setEntries] = useState<PromptEntry[]>([])
 
   const handleSystemPromptChange = (prompt: string) => {
@@ -47,37 +48,78 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
       return;
     }
 
-    const newEntry: PromptEntry = {
-      id: uuidv4(),
-      question,
-      guidance,
-      answer,
-      systemPrompt,
-      status: 'pending'
-    }
-
-    setEntries(prev => [newEntry, ...prev])
-
-    try {
-      console.log('[Single Mode] Request:', {
+    if (requestCount === 1) {
+      const newEntry: PromptEntry = {
+        id: uuidv4(),
         question,
         guidance,
         answer,
-        systemPrompt
-      });
-      const result = await evaluateAnswer(question, guidance, '', answer, systemPrompt)
-      console.log('[Single Mode] Response:', result);
-      setEntries(prev => prev.map(entry =>
-        entry.id === newEntry.id
-          ? { ...entry, status: 'completed', feedback: result }
-          : entry
-      ))
-    } catch {
-      setEntries(prev => prev.map(entry =>
-        entry.id === newEntry.id
-          ? { ...entry, status: 'error' }
-          : entry
-      ))
+        systemPrompt,
+        status: 'pending'
+      };
+      setEntries(prev => [newEntry, ...prev]);
+      try {
+        console.log('[Single Mode] Request:', {
+          question,
+          guidance,
+          answer,
+          systemPrompt,
+          requestCount
+        });
+        const result = await evaluateAnswer(question, guidance, '', answer, systemPrompt, 1) as ApiResponse;
+        console.log('[Single Mode] Response:', result);
+        setEntries(prev => prev.map(entry =>
+          entry.id === newEntry.id
+            ? { ...entry, status: 'completed', feedback: result }
+            : entry
+        ));
+      } catch (error) {
+        console.error('Single mode evaluation error:', error);
+        setEntries(prev => prev.map(entry =>
+          entry.id === newEntry.id
+            ? { ...entry, status: 'error' }
+            : entry
+        ));
+      }
+    } else {
+      // Add all as pending
+      const ids = Array(requestCount).fill(null).map(() => uuidv4());
+      setEntries(prev => [
+        ...ids.map(id => ({
+          id,
+          question,
+          guidance,
+          answer,
+          systemPrompt,
+          status: 'pending' as const
+        })),
+        ...prev
+      ]);
+      try {
+        console.log('[Single Mode] Request:', {
+          question,
+          guidance,
+          answer,
+          systemPrompt,
+          requestCount
+        });
+        const results = await evaluateAnswer(question, guidance, '', answer, systemPrompt, requestCount) as ApiResponse[];
+        console.log('[Single Mode] Response:', results);
+        setEntries(prev => prev.map(entry => {
+          const idx = ids.indexOf(entry.id);
+          if (idx !== -1) {
+            return { ...entry, status: 'completed', feedback: results[idx] };
+          }
+          return entry;
+        }));
+      } catch (error) {
+        console.error('Single mode evaluation error:', error);
+        setEntries(prev => prev.map(entry =>
+          ids.includes(entry.id)
+            ? { ...entry, status: 'error' as const }
+            : entry
+        ));
+      }
     }
   }
   return (
@@ -131,6 +173,20 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
           />
         </div>
 
+        <div className="input-group input-group-inline">
+          <label htmlFor="requestCount">Number of Evaluations:</label>
+          <input
+            type="number"
+            id="requestCount"
+            value={requestCount}
+            onChange={(e) => setRequestCount(Math.max(1, parseInt(e.target.value) || 1))}
+            min="1"
+            max="5"
+            className="number-input"
+          />
+          <span className="input-hint">(1-5 parallel requests for more consistent results)</span>
+        </div>
+
         <button onClick={handleSubmit} disabled={!question || !answer}>
           Evaluate Answer
         </button>
@@ -162,19 +218,9 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
                   {entry.status === 'pending' && <span className="pending">Evaluating...</span>}
                   {entry.status === 'error' && <span className="error">Error processing request</span>}
                   {entry.status === 'completed' && entry.feedback && (
-                    <div className="feedback-container">                      <div className={`score ${entry.feedback?.percentage && entry.feedback.percentage >= 80 ? 'high' : 'low'}`}>
-                        Score: {entry.feedback?.percentage ?? 0}%
-                      </div>
-                      <div className="evaluation">
-                        <h4>Main Improvement Areas:</h4>
-                        <ul className="gaps-list">
-                          {entry.feedback?.gaps?.map((gap, index) => (
-                            <li key={index}>{gap}</li>
-                          ))}
-                        </ul>
-                        <h4>Overall Feedback:</h4>
-                        <p>{entry.feedback?.evaluation}</p>
-                      </div>
+                    <div className="feedback-container">
+                      <div className={`result-pill ${entry.feedback.result}`}>{entry.feedback.result}</div>
+                      <div className="feedback-text">{entry.feedback.feedback}</div>
                     </div>
                   )}
                 </td>
