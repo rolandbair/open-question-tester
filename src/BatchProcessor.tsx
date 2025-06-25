@@ -20,16 +20,17 @@ const ResultIcon = ({ result, matches }: { result: EvaluationResult, matches: bo
   }
 };
 
-const defaultSystemPrompt = `You are an AI assistant helping to evaluate student answers.
-Your task is to:
-1. Compare the student's answer with the provided guidance
-2. Determine if the answer is 'correct', 'partially' correct, or 'incorrect'
-3. Provide constructive feedback explaining your evaluation
+const defaultSystemPrompt = `{Language}: Infer the language and texting style from the question.
+You are an educational evaluator designed to provide engaging feedback.
+Guide the student towards the correct understanding without directly giving away any part of the sample solution or evaluation criteria.
+Evaluate the answer **only** against the guidance and not the truth.
+Use the Teacher's Sample Answer(s) as a quality example, but NEVER as a rigid template for structure, wording, or order, nor to infer unstated requirements.
+Positively evaluate insufficient enumerations.
 
 Return ONLY a JSON response with this structure:
 {
-    "result": "correct" | "partially" | "incorrect",
-    "feedback": "brief explanation of the evaluation in German language, Du-Form"
+"result": "correct" | "partially" | "incorrect",
+"feedback": "feedback in {Language}"
 }`;
 
 export default function BatchProcessor() {
@@ -40,22 +41,35 @@ export default function BatchProcessor() {
     const saved = localStorage.getItem('batch_system_prompt');
     return saved || defaultSystemPrompt;
   });
+  const [lastFile, setLastFile] = useState<File | null>(null);
 
   useEffect(() => {
     // Initialize OpenAI or any other setup if needed
   }, []);
 
   const processFile = async (file: File) => {
+    setResults([]); // Clear results before processing
     setIsProcessing(true);
+    setLastFile(file);
     Papa.parse(file, {
       header: true,
       complete: async (results) => {
         console.log('Parsed CSV data:', results.data);
-        
-        // Filter out any empty rows
+        // Map to only the relevant fields, ignoring id and subject
+        const mappedRows = (results.data as any[]).map(row => ({
+          question: row.question,
+          answer: row.answer,
+          expectedResult: row.expectedResult,
+          guidance: row.guidance
+        }));
+        // Filter out any empty rows and ignore id/subject columns
         const rows = (results.data as CsvRow[]).filter(row => 
           row.question && row.answer && row.expectedResult && row.guidance
-        );
+        ).map(row => {
+          // Only keep relevant fields
+          const { question, answer, expectedResult, guidance } = row;
+          return { question, answer, expectedResult, guidance };
+        });
         
         if (rows.length === 0) {
           console.error('No valid rows found in CSV');
@@ -103,6 +117,13 @@ export default function BatchProcessor() {
     });
   };
 
+  const handleReprocess = () => {
+    if (lastFile) {
+      setResults([]);
+      processFile(lastFile);
+    }
+  };
+
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
@@ -110,6 +131,7 @@ export default function BatchProcessor() {
         alert('Please upload a CSV file');
         return;
       }
+      setResults([]); // Clear results before new upload
       processFile(file);
     }
   };
@@ -146,7 +168,7 @@ export default function BatchProcessor() {
 
       <div className="input-section">
         <div className="file-upload compact-upload file-upload-horizontal">
-          <p>Upload a CSV file with columns: question, answer, expectedResult (correct/partially/incorrect), guidance (evaluation criteria and sample answer)</p>
+          <p>Upload a CSV file with columns: id, subject, question, answer, expectedResult (correct/partially/incorrect), guidance (evaluation criteria and sample answer)</p>
           <a href="/open-question-tester/sample.csv" className="sample-link">Download Sample CSV</a>
           <input
             type="file"
@@ -160,7 +182,9 @@ export default function BatchProcessor() {
       
       <div className="results-section">
         <h2>Batch Evaluation Results</h2>
-        {isProcessing && <p className="processing">Processing CSV entries...</p>}
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {isProcessing && <p className="processing">Processing CSV entries...</p>}
+        </div>
         {!isProcessing && results.length > 0 && (
           <div className="results-summary-row">
             <div className="results-summary">
@@ -181,12 +205,23 @@ export default function BatchProcessor() {
                 <span className="summary-value">{results.length}</span>
               </div>
             </div>
-            <button 
-              onClick={handleClearResults}
-              className="clear-results-button"
-            >
-              Clear Results
-            </button>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button 
+                onClick={handleClearResults}
+                className="clear-results-button"
+              >
+                Clear Results
+              </button>
+              {lastFile && (
+                <button 
+                  onClick={() => { handleClearResults(); handleReprocess(); }}
+                  className="clear-results-button"
+                  disabled={isProcessing}
+                >
+                  Clear and Reprocess
+                </button>
+              )}
+            </div>
           </div>
         )}
         <div className="results-table-container full-width-table">
