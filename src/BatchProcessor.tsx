@@ -55,13 +55,6 @@ export default function BatchProcessor() {
       header: true,
       complete: async (results) => {
         console.log('Parsed CSV data:', results.data);
-        // Map to only the relevant fields, ignoring id and subject
-        const mappedRows = (results.data as any[]).map(row => ({
-          question: row.question,
-          answer: row.answer,
-          expectedResult: row.expectedResult,
-          guidance: row.guidance
-        }));
         // Filter out any empty rows and ignore id/subject columns
         const rows = (results.data as CsvRow[]).filter(row => 
           row.question && row.answer && row.expectedResult && row.guidance
