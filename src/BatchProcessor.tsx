@@ -85,7 +85,8 @@ export default function BatchProcessor() {
             return {
               ...row,
               actualResult: response.result || 'incorrect',
-              feedback: response.feedback || response.evaluation || 'No feedback provided',
+              feedback: (response.emoji ? response.emoji + ' ' : '') + (response.feedback || response.evaluation || 'No feedback provided'),
+              emoji: response.emoji,
               matches: (response.result || 'incorrect') === row.expectedResult
             };
           } catch (error) {

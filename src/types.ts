@@ -1,12 +1,14 @@
 export type EvaluationResult = 'correct' | 'partially' | 'incorrect';
 
 export interface ApiResponse {
+    type?: 'openQuestionFeedback';
     factors?: string[];
     gaps?: string[];
     percentage?: number;
     evaluation?: string;
     result?: EvaluationResult;
     feedback?: string;
+    emoji?: '👍' | '👉' | '👎';
 }
 
 export interface AggregatedApiResponse extends ApiResponse {
@@ -34,5 +36,6 @@ export interface CsvRow {
 export interface ProcessedResult extends CsvRow {
     actualResult: EvaluationResult;
     feedback: string;
+    emoji?: '👍' | '👉' | '👎';
     matches: boolean;
 }
