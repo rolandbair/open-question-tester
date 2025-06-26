@@ -75,16 +75,18 @@ export function CriteriaSettingsPanel({ criteria, setCriteria }: { criteria: any
   };
 
   return (
-    <div className="criteria-settings-panel">
-      <label>Feedback Criteria (JSON):</label>
+    <div className="input-group flex-1">
+      <label htmlFor="criteriaBox" className="criteria-label">Feedback Criteria (JSON):</label>
       <textarea
+        id="criteriaBox"
         rows={8}
-        style={{ width: '100%', fontFamily: 'monospace' }}
+        className="system-prompt-input"
         value={jsonValue}
         onChange={handleChange}
+        placeholder='[{"name":"Encouraging","description":"The feedback should be encouraging."}]'
       />
-      {error && <div style={{ color: 'red' }}>{error}</div>}
-      <div style={{ fontSize: '0.9em', color: '#666' }}>
+      {error && <div className="criteria-error">{error}</div>}
+      <div className="criteria-example">
         Example: <code>{`[{"name":"Encouraging","description":"The feedback should be encouraging."}]`}</code>
       </div>
     </div>
@@ -101,9 +103,15 @@ export default function BatchProcessor() {
   });
   const [lastFile, setLastFile] = useState<File | null>(null);
   const [criteria, setCriteria] = useState([
-    { name: 'Encouraging', description: 'The feedback should be encouraging and supportive.' },
-    { name: 'No Solution Given Away', description: 'The feedback should not directly give away the correct solution.' }
+    { name: 'No Solution is Revealed', description: 'No part of the expected solution may be explicitly or implicitly disclosed – not even to explain what is missing. This rule overrides all other criteria.' },
+    { name: 'No Suggestions that Lead to Solutions', description: 'Avoid hints, examples, or rephrasings that could lead the student to the correct answer.' },
+    { name: 'Correct Elements are Acknowledged', description: "Correct parts of the student's response should be explicitly acknowledged and confirmed as correct." },
+    { name: 'Incorrect or Missing Elements are Clearly Stated as Incorrect', description: "Any part of the student's response that does not match the guidance must be clearly stated as wrong or incomplete. Do not name or suggest the correct answer." },
+    { name: 'Feedback is Growth-Oriented and Constructive', description: 'The feedback encourages improvement by validating effort, supporting reflection, and promoting a growth mindset.' },
+    { name: 'Tone is Neutral and Respectful', description: 'The feedback maintains a professional, non-judgmental tone. Excessive praise or harsh criticism is avoided.' },
+    { name: 'Feedback is Limited to the Scope of the Guidance', description: 'Only aspects explicitly included in the task or guidance are addressed.' }
   ]);
+  const [criteriaEnabled, setCriteriaEnabled] = useState(false);
 
   useEffect(() => {
     // Initialize OpenAI or any other setup if needed
@@ -147,7 +155,7 @@ export default function BatchProcessor() {
 
             // LLM-based criteria checks (only if criteria present)
             let criteriaChecks = undefined;
-            if (criteria && Array.isArray(criteria) && criteria.length > 0) {
+            if (criteriaEnabled && criteria && Array.isArray(criteria) && criteria.length > 0) {
               criteriaChecks = await Promise.all(criteria.map(async (c: any) => {
                 try {
                   const check = await checkFeedbackCriterion(
@@ -226,21 +234,50 @@ export default function BatchProcessor() {
   return (
     <div className="container">
       <div className="api-key-section">
-        <div className="input-group">
-          <label htmlFor="systemPrompt">
-            System Prompt for Batch Evaluation:
-            <span className="prompt-hint">(This prompt will be used for evaluating all entries in the CSV file)</span>
-          </label>
-          <textarea
-            id="systemPrompt"
-            value={systemPrompt}
-            onChange={(e) => handleSystemPromptChange(e.target.value)}
-            placeholder="Enter the system prompt for evaluation..."
-            rows={18}
-            className="system-prompt-input"
-          />
+        <div className="horizontal-group">
+          <div className="input-group flex-1">
+            <label htmlFor="systemPrompt">
+              System Prompt for Batch Evaluation:
+              <span className="prompt-hint">(This prompt will be used for evaluating all entries in the CSV file)</span>
+            </label>
+            <textarea
+              id="systemPrompt"
+              value={systemPrompt}
+              onChange={(e) => handleSystemPromptChange(e.target.value)}
+              placeholder="Enter the system prompt for evaluation..."
+              rows={18}
+              className="system-prompt-input"
+            />
+          </div>
+          <div className="input-group flex-1" style={{ position: 'relative' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <label htmlFor="batch-criteria-enabled" className="criteria-label">Feedback Criteria (JSON):</label>
+              <input
+                id="batch-criteria-enabled"
+                type="checkbox"
+                checked={criteriaEnabled}
+                onChange={e => setCriteriaEnabled(e.target.checked)}
+                style={{ marginLeft: 4 }}
+              />
+              <span style={{ fontSize: '0.95em', color: '#666' }}>Enable</span>
+            </div>
+            <textarea
+              rows={8}
+              className="system-prompt-input"
+              value={JSON.stringify(criteria, null, 2)}
+              onChange={e => {
+                try {
+                  const parsed = JSON.parse(e.target.value);
+                  if (Array.isArray(parsed)) setCriteria(parsed);
+                } catch {}
+              }}
+              disabled={!criteriaEnabled}
+            />
+            <div className="criteria-example">
+              Example: <code>{`[{"name":"Encouraging","description":"The feedback should be encouraging."}]`}</code>
+            </div>
+          </div>
         </div>
-        <CriteriaSettingsPanel criteria={criteria} setCriteria={setCriteria} />
       </div>
 
       <div className="input-section">

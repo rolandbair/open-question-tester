@@ -5,7 +5,7 @@ import type { PromptEntry, ApiResponse } from './types';
 import { evaluateAnswer, checkFeedbackCriterion } from './api';
 import { v4 as uuidv4 } from 'uuid';
 import Navigation from './Navigation';
-import BatchProcessor, { CriteriaSettingsPanel } from './BatchProcessor';
+import BatchProcessor from './BatchProcessor';
 import { ApiProvider } from './ApiContext';
 
 function SingleEntry() {
@@ -36,9 +36,15 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   const [entries, setEntries] = useState<PromptEntry[]>([])
   // Criteria state for single mode (same as batch)
   const [criteria, setCriteria] = useState([
-    { name: 'Encouraging', description: 'The feedback should be encouraging and supportive.' },
-    { name: 'No Solution Given Away', description: 'The feedback should not directly give away the correct solution.' }
+    { name: 'No Solution is Revealed', description: 'No part of the expected solution may be explicitly or implicitly disclosed – not even to explain what is missing. This rule overrides all other criteria.' },
+    { name: 'No Suggestions that Lead to Solutions', description: 'Avoid hints, examples, or rephrasings that could lead the student to the correct answer.' },
+    { name: 'Correct Elements are Acknowledged', description: "Correct parts of the student's response should be explicitly acknowledged and confirmed as correct." },
+    { name: 'Incorrect or Missing Elements are Clearly Stated as Incorrect', description: "Any part of the student's response that does not match the guidance must be clearly stated as wrong or incomplete. Do not name or suggest the correct answer." },
+    { name: 'Feedback is Growth-Oriented and Constructive', description: 'The feedback encourages improvement by validating effort, supporting reflection, and promoting a growth mindset.' },
+    { name: 'Tone is Neutral and Respectful', description: 'The feedback maintains a professional, non-judgmental tone. Excessive praise or harsh criticism is avoided.' },
+    { name: 'Feedback is Limited to the Scope of the Guidance', description: 'Only aspects explicitly included in the task or guidance are addressed.' }
   ]);
+  const [criteriaEnabled, setCriteriaEnabled] = useState(false);
 
   const handleSystemPromptChange = (prompt: string) => {
     setSystemPrompt(prompt);
@@ -74,7 +80,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
         const result = await evaluateAnswer(question, guidance, '', answer, systemPrompt, 1) as ApiResponse;
         // LLM-based criteria checks for single mode (only if criteria present)
         let criteriaChecks = undefined;
-        if (criteria && Array.isArray(criteria) && criteria.length > 0) {
+        if (criteriaEnabled && criteria && Array.isArray(criteria) && criteria.length > 0) {
           criteriaChecks = await Promise.all(criteria.map(async (c: any) => {
             try {
               const check = await checkFeedbackCriterion(
@@ -128,7 +134,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
         console.log('[Single Mode] Response:', results);
         // LLM-based criteria checks for each result (only if criteria present)
         let allCriteriaChecks: any[] = [];
-        if (criteria && Array.isArray(criteria) && criteria.length > 0) {
+        if (criteriaEnabled && criteria && Array.isArray(criteria) && criteria.length > 0) {
           allCriteriaChecks = await Promise.all(results.map(async (result) => {
             return Promise.all(criteria.map(async (c: any) => {
               try {
@@ -164,9 +170,9 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
   }
   return (
     <div className="container">
-      
-      <div className="api-key-section">
-        <div className="input-group">
+      {/* System Prompt & Feedback Criteria side by side */}
+      <div className="horizontal-group">
+        <div className="input-group flex-1">
           <label htmlFor="systemPrompt">System Prompt:</label>
           <textarea
             id="systemPrompt"
@@ -177,11 +183,39 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
             className="system-prompt-input"
           />
         </div>
-        <CriteriaSettingsPanel criteria={criteria} setCriteria={setCriteria} />
+        <div className="input-group flex-1" style={{ position: 'relative' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <label htmlFor="criteria-enabled" className="criteria-label">Feedback Criteria (JSON):</label>
+            <input
+              id="criteria-enabled"
+              type="checkbox"
+              checked={criteriaEnabled}
+              onChange={e => setCriteriaEnabled(e.target.checked)}
+              style={{ marginLeft: 4 }}
+            />
+            <span style={{ fontSize: '0.95em', color: '#666' }}>Enable</span>
+          </div>
+          <textarea
+            rows={8}
+            className="system-prompt-input"
+            value={JSON.stringify(criteria, null, 2)}
+            onChange={e => {
+              try {
+                const parsed = JSON.parse(e.target.value);
+                if (Array.isArray(parsed)) setCriteria(parsed);
+              } catch {}
+            }}
+            disabled={!criteriaEnabled}
+          />
+          <div className="criteria-example">
+            Example: <code>{`[{"name":"Encouraging","description":"The feedback should be encouraging."}]`}</code>
+          </div>
+        </div>
       </div>
 
-      <div className="input-section">
-        <div className="input-group">
+      {/* Teacher's Question & Guidance side by side */}
+      <div className="horizontal-group">
+        <div className="input-group flex-1">
           <label htmlFor="question">Teacher's Question:</label>
           <textarea
             id="question"
@@ -191,8 +225,7 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
             rows={3}
           />
         </div>
-
-        <div className="input-group">
+        <div className="input-group flex-1">
           <label htmlFor="guidance">Guidance (Evaluation Criteria and/or Sample Solution):</label>
           <textarea
             id="guidance"
@@ -202,7 +235,10 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
             rows={5}
           />
         </div>
+      </div>
 
+      {/* Student's Answer and rest unchanged */}
+      <div className="input-section">
         <div className="input-group">
           <label htmlFor="answer">Student's Answer:</label>
           <textarea
@@ -213,7 +249,6 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
             rows={3}
           />
         </div>
-
         <div className="input-group input-group-inline">
           <label htmlFor="requestCount">Number of Evaluations:</label>
           <input
@@ -227,7 +262,6 @@ Return ONLY a JSON response with this structure, evaluation result in German lan
           />
           <span className="input-hint">(1-5 parallel requests for more consistent results)</span>
         </div>
-
         <button onClick={handleSubmit} disabled={!question || !answer}>
           Evaluate Answer
         </button>
