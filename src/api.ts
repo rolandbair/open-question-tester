@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { ApiResponse } from './types';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
+import { defaultSystemPrompt, checkFeedbackCriterionPrompt } from './prompts';
 
 let openaiInstance: OpenAI | null = null;
 
@@ -16,7 +17,7 @@ export async function evaluateAnswer(
     guidance: string, 
     _unused: string, 
     answer: string,
-    systemPrompt: string,
+    systemPrompt: string = defaultSystemPrompt,
     count: number = 1 // Number of parallel evaluations to run
 ): Promise<ApiResponse | ApiResponse[]> {
     if (!openaiInstance) {
@@ -74,7 +75,7 @@ export async function checkFeedbackCriterion(
   answer: string,
   feedback: string,
   criterion: { name: string; description: string },
-  systemPrompt = 'You are an expert evaluator for open question feedback. For the following question, answer, and feedback, check if the feedback meets the criterion described. Respond ONLY with a JSON object: { "passed": true | false, "explanation": string }'
+  systemPrompt = checkFeedbackCriterionPrompt
 ): Promise<{ passed: boolean, explanation: string }> {
   if (!openaiInstance) {
     const storedKey = localStorage.getItem('openai_api_key');

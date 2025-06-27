@@ -1,10 +1,8 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
 import { useApi } from './ApiContext';
 import { Edit2 } from 'react-feather';
 
 export default function Navigation() {
-  const location = useLocation();
   const { apiKey, setApiKey } = useApi();
   const [editing, setEditing] = useState(false);
   const [inputValue, setInputValue] = useState(apiKey);
@@ -17,20 +15,6 @@ export default function Navigation() {
   return (
     <div className="nav-container nav-flex nav-compact">
       <div className="nav-title">Open Question Tester</div>
-      <nav className="navigation nav-center nav-buttons">
-        <Link 
-          to="/" 
-          className={`nav-btn${location.pathname === '/' ? ' active' : ''}`}
-        >
-          Single
-        </Link>
-        <Link 
-          to="/batch" 
-          className={`nav-btn${location.pathname === '/batch' ? ' active' : ''}`}
-        >
-          Batch
-        </Link>
-      </nav>
       <div className="nav-api-key-text">
         <span className="api-key-label">API Key:</span>
         {editing ? (
