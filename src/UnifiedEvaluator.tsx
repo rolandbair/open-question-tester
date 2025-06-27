@@ -327,13 +327,13 @@ export default function UnifiedEvaluator() {
         </div>
         {/* Summary row */}
         {!isProcessing && results.length > 0 && (
-          <div className="results-summary-row" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: 8, fontSize: '10px' }}>
+          <div className="results-summary-row" style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: 8, fontSize: '10px', lineHeight: '1.1', padding: 0 }}>
             {Array.from(new Set(results.map(r => r.promptNumber))).map((num) => {
               const group = results.filter(r => r.promptNumber === num);
               const correctCount = group.filter(r => r.actualResult === 'correct').length;
               const incorrectCount = group.filter(r => r.actualResult === 'incorrect').length;
               return (
-                <div key={num} className="results-summary" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                <div key={num} className="results-summary" style={{ display: 'flex', gap: '1.2rem', alignItems: 'center', minHeight: '1.1em', height: '1.1em', padding: 0 }}>
                   <span style={{ fontWeight: 600 }}>Prompt #{num}:</span>
                   <div className="summary-item matches"><span className="summary-label">Matches:</span> <span className="summary-value">{group.filter(r => r.matches).length}</span></div>
                   <div className="summary-item non-matches"><span className="summary-label">Non-matches:</span> <span className="summary-value">{group.filter(r => !r.matches).length}</span></div>
@@ -343,7 +343,7 @@ export default function UnifiedEvaluator() {
                 </div>
               );
             })}
-            <button type="button" onClick={() => setResults([])} className="clear-results-button" style={{ fontSize: '10px', padding: '0.2em 1em', marginTop: 4 }}>Clear Results</button>
+            <button type="button" onClick={() => setResults([])} className="clear-results-button" style={{ fontSize: '10px', padding: '0.2em 1em', marginTop: 2, height: '1.2em', minHeight: '1.2em' }}>Clear Results</button>
           </div>
         )}
         {results.length > 0 && (
@@ -352,36 +352,52 @@ export default function UnifiedEvaluator() {
               <thead>
                 <tr>
                   <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Prompt #</th>
-                  <th>Question</th>
-                  <th>Answer</th>
-                  <th>Guidance</th>
-                  <th>Expected</th>
-                  <th>Result</th>
-                  <th>Status</th>
-                  <th>Feedback</th>
-                  <th>Criteria</th>
+                  <th style={{ width: 220, minWidth: 120, maxWidth: 320 }}>Question</th>
+                  <th style={{ width: 120, minWidth: 80, maxWidth: 200 }}>Answer</th>
+                  <th style={{ width: 320, minWidth: 120, maxWidth: 480 }}>Guidance</th>
+                  <th style={{ width: 60, minWidth: 40, maxWidth: 80 }}>Expected</th>
+                  <th style={{ width: 60, minWidth: 40, maxWidth: 80 }}>Result</th>
+                  <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Status</th>
+                  <th style={{ width: 260, minWidth: 120, maxWidth: 400 }}>Feedback</th>
+                  <th style={{ width: 180, minWidth: 80, maxWidth: 220 }}>Criteria</th>
                 </tr>
               </thead>
               <tbody>
                 {results.map((result, index) => (
                   <tr key={index} className="result-row">
-                    <td style={{ width: 36, minWidth: 24, maxWidth: 48, textAlign: 'center' }}>{result.promptNumber}</td>
-                    <td className="truncate-cell" title={result.question}>{result.question}</td>
-                    <td className="truncate-cell" title={result.answer}>{result.answer}</td>
-                    <td className="truncate-cell" title={result.guidance}>{result.guidance}</td>
-                    <td>{result.expectedResult}</td>
-                    <td>{result.actualResult}</td>
-                    <td>{result.matches ? '✔️' : '❌'}</td>
-                    <td className="truncate-cell" title={result.feedback}>{result.feedback}</td>
-                    <td>
-                      {result.criteriaChecks && result.criteriaChecks.map((c, i) => (
-                        <span key={i} style={{ marginRight: 8 }}>
-                          {c.passed === true && '✔️'}
-                          {c.passed === false && '❌'}
-                          {c.passed === null && '⏳'}
-                          {' '}{c.name}
+                    <td className="truncate-cell" style={{ width: 36, minWidth: 24, maxWidth: 48, textAlign: 'center' }} title={String(result.promptNumber)}>
+                      {String(result.promptNumber).length > 12 ? String(result.promptNumber).slice(0, 12) + '…' : result.promptNumber}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 220, minWidth: 120, maxWidth: 320 }} title={result.question}>
+                      {result.question.length > 180 ? result.question.slice(0, 180) + '…' : result.question}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 120, minWidth: 80, maxWidth: 200 }} title={result.answer}>
+                      {result.answer.length > 100 ? result.answer.slice(0, 100) + '…' : result.answer}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 320, minWidth: 120, maxWidth: 480 }} title={result.guidance}>
+                      {result.guidance.length > 400 ? result.guidance.slice(0, 400) + '…' : result.guidance}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 60, minWidth: 40, maxWidth: 80 }} title={result.expectedResult}>
+                      {String(result.expectedResult).length > 20 ? String(result.expectedResult).slice(0, 20) + '…' : result.expectedResult}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 60, minWidth: 40, maxWidth: 80 }} title={result.actualResult}>
+                      {String(result.actualResult).length > 20 ? String(result.actualResult).slice(0, 20) + '…' : result.actualResult}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 36, minWidth: 24, maxWidth: 48, textAlign: 'center' }} title={result.matches ? '✔️' : '❌'}>
+                      {result.matches ? '✔️' : '❌'}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 260, minWidth: 120, maxWidth: 400 }} title={result.feedback}>
+                      {result.feedback.length > 300 ? result.feedback.slice(0, 300) + '…' : result.feedback}
+                    </td>
+                    <td className="truncate-cell" style={{ width: 180, minWidth: 80, maxWidth: 220 }} title={result.criteriaChecks ? result.criteriaChecks.map((c) => `${c.passed === true ? '✔️' : c.passed === false ? '❌' : '⏳'} ${c.name}`).join(', ') : ''}>
+                      {result.criteriaChecks && (
+                        <span>
+                          {(() => {
+                            const str = result.criteriaChecks.map((c) => `${c.passed === true ? '✔️' : c.passed === false ? '❌' : '⏳'} ${c.name}`).join(', ');
+                            return str.length > 60 ? str.slice(0, 60) + '…' : str;
+                          })()}
                         </span>
-                      ))}
+                      )}
                     </td>
                   </tr>
                 ))}
