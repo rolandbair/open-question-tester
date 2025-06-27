@@ -14,6 +14,10 @@ export default function UnifiedEvaluator() {
   // Prompt
   const [systemPrompt, setSystemPrompt] = useState(defaultSystemPrompt);
   const [promptFileError, setPromptFileError] = useState<string | null>(null);
+  // Use a union type for promptFilePrompts: null | string[] | {number: string, prompt: string}[]
+  type PromptFileType = null | string[] | { number: string; prompt: string }[];
+  const [promptFilePrompts, setPromptFilePrompts] = useState<PromptFileType>(null); // null = not using file
+  const [promptFileName, setPromptFileName] = useState<string | null>(null);
 
   // Criteria
   const [criteriaEnabled, setCriteriaEnabled] = useState(false);
@@ -41,9 +45,39 @@ export default function UnifiedEvaluator() {
   const handlePromptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setPromptFileName(file.name);
     const reader = new FileReader();
     reader.onload = (event) => {
-      setSystemPrompt(event.target?.result as string || '');
+      const text = event.target?.result as string || '';
+      if (file.name.endsWith('.csv')) {
+        // Parse CSV for prompts with number
+        Papa.parse(text, {
+          header: false,
+          skipEmptyLines: true,
+          complete: (results) => {
+            try {
+              // Each row: [number, prompt]
+              const prompts = (results.data as string[][])
+                .filter(row => row[0] && row[1])
+                .map(row => ({ number: row[0], prompt: row[1] }));
+              if (prompts.length === 0) throw new Error();
+              setPromptFilePrompts(prompts);
+              setPromptFileError(null);
+            } catch {
+              setPromptFilePrompts(null);
+              setPromptFileError('Invalid CSV format for prompts. Each row should have a prompt number and prompt text.');
+            }
+          },
+          error: () => {
+            setPromptFilePrompts(null);
+            setPromptFileError('Failed to parse CSV');
+          },
+        });
+      } else {
+        // Treat as plain text prompt, assign number '1'
+        setPromptFilePrompts([{ number: '1', prompt: text }]);
+        setPromptFileError(null);
+      }
     };
     reader.onerror = () => setPromptFileError('Failed to read file');
     reader.readAsText(file);
@@ -101,40 +135,57 @@ export default function UnifiedEvaluator() {
         return;
       }
     }
-    const promises = rows.map(async (row) => {
-      try {
-        const response = await evaluateAnswer(row.question, row.guidance, '', row.answer, systemPrompt, requestCount) as ApiResponse;
-        let criteriaChecks = undefined;
-        if (criteriaEnabled && parsedCriteria.length > 0) {
-          // Only evaluate criteria matching the feedback result
-          const relevantCriteria = parsedCriteria.filter((c: any) => c.result === (response.result || 'incorrect'));
-          criteriaChecks = await Promise.all(relevantCriteria.map(async (c: any) => {
-            try {
-              const check = await checkFeedbackCriterion(row.question, row.answer, response.feedback || response.evaluation || '', c);
-              return { name: c.name, passed: check.passed, explanation: check.explanation };
-            } catch {
-              return { name: c.name, passed: null, explanation: 'Error' };
+    // Use prompts from file if present, else from text field
+    let prompts: { number: string | number; prompt: string }[];
+    if (promptFilePrompts && promptFilePrompts.length > 0 && typeof promptFilePrompts[0] === 'object') {
+      prompts = promptFilePrompts as { number: string | number; prompt: string }[];
+    } else if (promptFilePrompts && promptFilePrompts.length > 0) {
+      prompts = (promptFilePrompts as string[]).map((p, i) => ({ number: i + 1, prompt: p as string }));
+    } else {
+      prompts = [{ number: 1, prompt: systemPrompt }];
+    }
+    const allPromises: Promise<ProcessedResult>[] = [];
+    rows.forEach(row => {
+      prompts.forEach(({ number, prompt }) => {
+        allPromises.push((async () => {
+          try {
+            const response = await evaluateAnswer(row.question, row.guidance, '', row.answer, prompt, requestCount) as ApiResponse;
+            let criteriaChecks = undefined;
+            if (criteriaEnabled && parsedCriteria.length > 0) {
+              const relevantCriteria = parsedCriteria.filter((c: any) => c.result === (response.result || 'incorrect'));
+              criteriaChecks = await Promise.all(relevantCriteria.map(async (c: any) => {
+                try {
+                  const check = await checkFeedbackCriterion(row.question, row.answer, response.feedback || response.evaluation || '', c);
+                  return { name: c.name, passed: check.passed, explanation: check.explanation };
+                } catch {
+                  return { name: c.name, passed: null, explanation: 'Error' };
+                }
+              }));
             }
-          }));
-        }
-        return {
-          ...row,
-          actualResult: response.result || 'incorrect',
-          feedback: (response.emoji ? response.emoji + ' ' : '') + (response.feedback || response.evaluation || 'No feedback provided'),
-          emoji: response.emoji,
-          matches: (response.result || 'incorrect') === row.expectedResult,
-          ...(criteriaChecks !== undefined ? { criteriaChecks } : {}),
-        };
-      } catch {
-        return {
-          ...row,
-          actualResult: 'incorrect' as EvaluationResult,
-          feedback: 'Error processing row',
-          matches: false,
-        };
-      }
+            return {
+              ...row,
+              actualResult: response.result || 'incorrect',
+              feedback: (response.emoji ? response.emoji + ' ' : '') + (response.feedback || response.evaluation || 'No feedback provided'),
+              emoji: response.emoji,
+              matches: (response.result || 'incorrect') === row.expectedResult,
+              promptUsed: prompt,
+              promptNumber: number,
+              ...(criteriaChecks !== undefined ? { criteriaChecks } : {}),
+            };
+          } catch {
+            return {
+              ...row,
+              actualResult: 'incorrect' as EvaluationResult,
+              feedback: 'Error processing row',
+              matches: false,
+              promptUsed: prompt,
+              promptNumber: number,
+            };
+          }
+        })());
+      });
     });
-    const allResults = await Promise.all(promises);
+    const allResults = await Promise.all(allPromises);
     setResults(allResults);
     setIsProcessing(false);
   };
@@ -148,12 +199,32 @@ export default function UnifiedEvaluator() {
           <textarea
             id="systemPrompt"
             value={systemPrompt}
-            onChange={e => setSystemPrompt(e.target.value)}
+            onChange={e => { setSystemPrompt(e.target.value); setPromptFilePrompts(null); setPromptFileName(null); }}
             rows={8}
             className="system-prompt-input"
+            disabled={!!promptFilePrompts}
           />
-          <input type="file" accept=".txt,.md" onChange={handlePromptUpload} />
+          <input type="file" accept=".txt,.md,.csv" onChange={handlePromptUpload} />
           {promptFileError && <div className="error">{promptFileError}</div>}
+          {promptFilePrompts && Array.isArray(promptFilePrompts) && typeof promptFilePrompts[0] === 'object' ? (
+            <div className="info" style={{ color: '#0077cc', fontSize: '10px', marginTop: 4 }}>
+              Using {promptFilePrompts.length} prompt{promptFilePrompts.length > 1 ? 's' : ''} from file{promptFileName ? `: ${promptFileName}` : ''}.<br />
+              Format: <code>number,prompt</code> (e.g. <code>1,Prompt text</code>)
+              <button type="button" style={{ marginLeft: 8, fontSize: '10px' }} onClick={() => { setPromptFilePrompts(null); setPromptFileName(null); }}>Clear file</button>
+            </div>
+          ) :
+            promptFilePrompts && (
+              <div className="info" style={{ color: '#0077cc', fontSize: '10px', marginTop: 4 }}>
+                Using {promptFilePrompts.length} prompt{promptFilePrompts.length > 1 ? 's' : ''} from file{promptFileName ? `: ${promptFileName}` : ''}.
+                <button type="button" style={{ marginLeft: 8, fontSize: '10px' }} onClick={() => { setPromptFilePrompts(null); setPromptFileName(null); }}>Clear file</button>
+              </div>
+            )
+          }
+          {!promptFilePrompts && (
+            <div className="info" style={{ color: '#666', fontSize: '10px', marginTop: 4 }}>
+              Using prompt from text field.
+            </div>
+          )}
         </div>
         <div className="input-group flex-1" style={{ position: 'relative' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
@@ -256,13 +327,23 @@ export default function UnifiedEvaluator() {
         </div>
         {/* Summary row */}
         {!isProcessing && results.length > 0 && (
-          <div className="results-summary-row" style={{ display: 'flex', alignItems: 'center', gap: '2rem', marginBottom: 8, fontSize: '10px' }}>
-            <div className="results-summary" style={{ display: 'flex', gap: '1.5rem' }}>
-              <div className="summary-item matches"><span className="summary-label">Matches:</span> <span className="summary-value">{results.filter(r => r.matches).length}</span></div>
-              <div className="summary-item non-matches"><span className="summary-label">Non-matches:</span> <span className="summary-value">{results.filter(r => !r.matches).length}</span></div>
-              <div className="summary-item total"><span className="summary-label">Total:</span> <span className="summary-value">{results.length}</span></div>
-            </div>
-            <button type="button" onClick={() => setResults([])} className="clear-results-button" style={{ fontSize: '10px', padding: '0.2em 1em' }}>Clear Results</button>
+          <div className="results-summary-row" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: 8, fontSize: '10px' }}>
+            {Array.from(new Set(results.map(r => r.promptNumber))).map((num) => {
+              const group = results.filter(r => r.promptNumber === num);
+              const correctCount = group.filter(r => r.actualResult === 'correct').length;
+              const incorrectCount = group.filter(r => r.actualResult === 'incorrect').length;
+              return (
+                <div key={num} className="results-summary" style={{ display: 'flex', gap: '1.5rem', alignItems: 'center' }}>
+                  <span style={{ fontWeight: 600 }}>Prompt #{num}:</span>
+                  <div className="summary-item matches"><span className="summary-label">Matches:</span> <span className="summary-value">{group.filter(r => r.matches).length}</span></div>
+                  <div className="summary-item non-matches"><span className="summary-label">Non-matches:</span> <span className="summary-value">{group.filter(r => !r.matches).length}</span></div>
+                  <div className="summary-item total"><span className="summary-label">Total:</span> <span className="summary-value">{group.length}</span></div>
+                  <div className="summary-item correct"><span className="summary-label">Correct:</span> <span className="summary-value">{correctCount}</span></div>
+                  <div className="summary-item incorrect"><span className="summary-label">Incorrect:</span> <span className="summary-value">{incorrectCount}</span></div>
+                </div>
+              );
+            })}
+            <button type="button" onClick={() => setResults([])} className="clear-results-button" style={{ fontSize: '10px', padding: '0.2em 1em', marginTop: 4 }}>Clear Results</button>
           </div>
         )}
         {results.length > 0 && (
@@ -270,6 +351,7 @@ export default function UnifiedEvaluator() {
             <table className="results-table">
               <thead>
                 <tr>
+                  <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Prompt #</th>
                   <th>Question</th>
                   <th>Answer</th>
                   <th>Guidance</th>
@@ -282,14 +364,15 @@ export default function UnifiedEvaluator() {
               </thead>
               <tbody>
                 {results.map((result, index) => (
-                  <tr key={index}>
-                    <td>{result.question}</td>
-                    <td>{result.answer}</td>
-                    <td>{result.guidance}</td>
+                  <tr key={index} className="result-row">
+                    <td style={{ width: 36, minWidth: 24, maxWidth: 48, textAlign: 'center' }}>{result.promptNumber}</td>
+                    <td className="truncate-cell" title={result.question}>{result.question}</td>
+                    <td className="truncate-cell" title={result.answer}>{result.answer}</td>
+                    <td className="truncate-cell" title={result.guidance}>{result.guidance}</td>
                     <td>{result.expectedResult}</td>
                     <td>{result.actualResult}</td>
                     <td>{result.matches ? '✔️' : '❌'}</td>
-                    <td>{result.feedback}</td>
+                    <td className="truncate-cell" title={result.feedback}>{result.feedback}</td>
                     <td>
                       {result.criteriaChecks && result.criteriaChecks.map((c, i) => (
                         <span key={i} style={{ marginRight: 8 }}>
@@ -307,6 +390,31 @@ export default function UnifiedEvaluator() {
           </div>
         )}
       </div>
+      {/* Add styles for truncation and hover */}
+      <style>{`
+        .truncate-cell {
+          max-height: 1.2em;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+          cursor: pointer;
+          vertical-align: top;
+          line-height: 1.2em;
+          max-width: 220px;
+        }
+        .result-row {
+          height: 1.4em;
+          max-height: 1.4em;
+        }
+        .result-row:hover .truncate-cell {
+          white-space: normal;
+          max-height: none;
+          background: #f8f8ff;
+          z-index: 2;
+          position: relative;
+          overflow: visible;
+        }
+      `}</style>
     </div>
   );
 }

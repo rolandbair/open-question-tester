@@ -40,4 +40,6 @@ export interface ProcessedResult extends CsvRow {
     emoji?: '👍' | '👉' | '👎';
     matches: boolean;
     criteriaChecks?: { name: string; passed: boolean | null }[];
+    promptUsed?: string; // Added for multi-prompt support
+    promptNumber?: string | number; // Added for prompt number support
 }
