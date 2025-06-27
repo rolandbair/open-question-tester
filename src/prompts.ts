@@ -29,7 +29,17 @@ Return ONLY a JSON response with this structure:
 `;
 
 export const initialFeedbackCriteria = [
-  { name: "No solution revealed", description: "The feedback does not reveal any parts of the sample solution or evaluation criteria." }
+  {
+    name: "No solution revealed",
+    description: "The feedback does not reveal any parts of the sample solution or evaluation criteria.",
+    result: "incorrect" // applies only when feedback result is 'incorrect'
+  },
+  {
+    name: "No solution revealed",
+    description: "The feedback does not reveal any parts of the sample solution or evaluation criteria.",
+    result: "partially" // applies only when feedback result is 'incorrect'
+  }
+  // Add more criteria as needed, each with a 'result' property: 'incorrect', 'partially', or 'correct'
 ];
 
 export const checkFeedbackCriterionPrompt =

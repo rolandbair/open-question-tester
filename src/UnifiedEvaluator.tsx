@@ -106,7 +106,9 @@ export default function UnifiedEvaluator() {
         const response = await evaluateAnswer(row.question, row.guidance, '', row.answer, systemPrompt, requestCount) as ApiResponse;
         let criteriaChecks = undefined;
         if (criteriaEnabled && parsedCriteria.length > 0) {
-          criteriaChecks = await Promise.all(parsedCriteria.map(async (c: any) => {
+          // Only evaluate criteria matching the feedback result
+          const relevantCriteria = parsedCriteria.filter((c: any) => c.result === (response.result || 'incorrect'));
+          criteriaChecks = await Promise.all(relevantCriteria.map(async (c: any) => {
             try {
               const check = await checkFeedbackCriterion(row.question, row.answer, response.feedback || response.evaluation || '', c);
               return { name: c.name, passed: check.passed, explanation: check.explanation };
