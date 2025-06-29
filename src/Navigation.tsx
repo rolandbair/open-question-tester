@@ -13,7 +13,7 @@ export default function Navigation() {
   };
 
   return (
-    <div className="nav-container nav-flex nav-compact">
+    <nav className="nav-bar">
       <div className="nav-title">Open Question Tester</div>
       <div className="nav-api-key-text">
         <span className="api-key-label">API Key:</span>
@@ -32,13 +32,13 @@ export default function Navigation() {
           </>
         ) : (
           <>
-            <span className="api-key-value">{apiKey ? '••••••••••••••••••••' : <span style={{color:'#dc3545'}}>Not set</span>}</span>
+            <span className="api-key-value">{apiKey ? '••••••••••••••••••••' : <span className="api-key-notset">Not set</span>}</span>
             <button className="api-key-edit-btn" title="Edit API Key" onClick={() => { setInputValue(apiKey); setEditing(true); }}>
               <Edit2 size={16} />
             </button>
           </>
         )}
       </div>
-    </div>
+    </nav>
   );
 }

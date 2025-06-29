@@ -1,5 +1,4 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
-import './App.css';
 import Navigation from './Navigation';
 import UnifiedEvaluator from './UnifiedEvaluator';
 import { ApiProvider } from './ApiContext';
