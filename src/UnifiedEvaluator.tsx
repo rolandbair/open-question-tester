@@ -209,7 +209,6 @@ export default function UnifiedEvaluator() {
         promptFileName={promptFileName}
         setPromptFileName={setPromptFileName}
         promptFileError={promptFileError}
-        setPromptFileError={setPromptFileError}
         handlePromptUpload={handlePromptUpload}
         criteriaEnabled={criteriaEnabled}
         setCriteriaEnabled={setCriteriaEnabled}

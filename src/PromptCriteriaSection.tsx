@@ -10,7 +10,6 @@ interface PromptCriteriaSectionProps {
   promptFileName: string | null;
   setPromptFileName: (val: string | null) => void;
   promptFileError: string | null;
-  setPromptFileError: (val: string | null) => void;
   handlePromptUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   criteriaEnabled: boolean;
   setCriteriaEnabled: (val: boolean) => void;
@@ -29,7 +28,6 @@ const PromptCriteriaSection: React.FC<PromptCriteriaSectionProps> = ({
   promptFileName,
   setPromptFileName,
   promptFileError,
-  setPromptFileError,
   handlePromptUpload,
   criteriaEnabled,
   setCriteriaEnabled,
