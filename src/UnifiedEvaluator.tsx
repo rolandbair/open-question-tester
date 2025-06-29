@@ -1,5 +1,4 @@
 import React, { useState } from 'react';
-import Papa from 'papaparse';
 import { evaluateAnswer, checkFeedbackCriterion } from './api';
 import type { CsvRow, ProcessedResult, EvaluationResult, ApiResponse } from './types';
 import { v4 as uuidv4 } from 'uuid';
@@ -7,6 +6,7 @@ import { defaultSystemPrompt, initialFeedbackCriteria } from './prompts';
 import PromptCriteriaSection from './PromptCriteriaSection';
 import TestDataSection from './TestDataSection';
 import ResultsSection from './ResultsSection';
+import { parsePromptFile, parseTableCsv } from './utils/csvUtils';
 
 // Table row type for editable table
 interface EditableRow extends CsvRow {
@@ -55,29 +55,14 @@ export default function UnifiedEvaluator() {
     reader.onload = (event) => {
       const text = event.target?.result as string || '';
       if (file.name.endsWith('.csv')) {
-        // Parse CSV for prompts with number
-        Papa.parse(text, {
-          header: false,
-          skipEmptyLines: true,
-          complete: (results) => {
-            try {
-              // Each row: [number, prompt]
-              const prompts = (results.data as string[][])
-                .filter(row => row[0] && row[1])
-                .map(row => ({ number: row[0], prompt: row[1] }));
-              if (prompts.length === 0) throw new Error();
-              setPromptFilePrompts(prompts);
-              setPromptFileError(null);
-            } catch {
-              setPromptFilePrompts(null);
-              setPromptFileError('Invalid CSV format for prompts. Each row should have a prompt number and prompt text.');
-            }
-          },
-          error: () => {
-            setPromptFilePrompts(null);
-            setPromptFileError('Failed to parse CSV');
-          },
-        });
+        const prompts = parsePromptFile(text);
+        if (prompts) {
+          setPromptFilePrompts(prompts);
+          setPromptFileError(null);
+        } else {
+          setPromptFilePrompts(null);
+          setPromptFileError('Invalid CSV format for prompts. Each row should have a prompt number and prompt text.');
+        }
       } else {
         // Treat as plain text prompt, assign number '1'
         setPromptFilePrompts([{ number: '1', prompt: text }]);
@@ -92,19 +77,14 @@ export default function UnifiedEvaluator() {
   const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    Papa.parse(file, {
-      header: true,
-      complete: (results) => {
-        try {
-          const parsed = (results.data as CsvRow[]).filter(row => row.question && row.answer);
-          setRows(parsed.map(row => ({ ...row, id: uuidv4() })));
-          setCsvError(null);
-        } catch {
-          setCsvError('Invalid CSV format');
-        }
+    parseTableCsv(
+      file,
+      (parsed) => {
+        setRows(parsed.map(row => ({ ...row, id: uuidv4() })));
+        setCsvError(null);
       },
-      error: () => setCsvError('Failed to parse CSV'),
-    });
+      (msg) => setCsvError(msg)
+    );
   };
 
   // --- Handlers: Editable Table ---
