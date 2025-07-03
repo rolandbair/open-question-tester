@@ -97,7 +97,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
                       // If key is 'result', show the value, and after it, add a correctness cell if expectedResult exists
                       if (key === 'result') {
                         const cells = [];
-                        cells.push(<td key={key}>{val !== undefined ? String(val) : ''}</td>);
+                        cells.push(<td key={key} title={String(val)}>{val !== undefined ? String(val) : ''}</td>);
                         // Add correctness cell right after 'result' if expectedResult exists
                         if (typeof val !== 'undefined' && typeof (result as any).expectedResult !== 'undefined') {
                           const match = val === (result as any).expectedResult;
@@ -127,7 +127,7 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
                         const json = JSON.stringify(val);
                         return <td key={key} title={json}>[{val.length} items]</td>;
                       }
-                      return <td key={key}>{val !== undefined ? String(val) : ''}</td>;
+                      return <td key={key} title={String(val)}>{val !== undefined ? String(val) : ''}</td>;
                     });
                   })()}
                 </tr>
