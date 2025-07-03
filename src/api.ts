@@ -1,7 +1,6 @@
 import OpenAI from 'openai';
 import type { ApiResponse } from './types';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
-import { defaultSystemPrompt, checkFeedbackCriterionPrompt } from './prompts';
 
 let openaiInstance: OpenAI | null = null;
 
@@ -12,16 +11,13 @@ export function initializeOpenAI(apiKey: string) {
     });
 }
 
-export async function evaluateAnswer(
-    question: string, 
-    guidance: string, 
-    _unused: string, 
-    answer: string,
-    systemPrompt: string = defaultSystemPrompt,
-    count: number = 1 // Number of parallel evaluations to run
+
+export async function evaluateGeneric(
+    row: Record<string, any>,
+    columns: { key: string; label: string }[],
+    systemPrompt: string = "FALLBACK PROMPT"
 ): Promise<ApiResponse | ApiResponse[]> {
     if (!openaiInstance) {
-        // Try to initialize from localStorage if possible
         const storedKey = localStorage.getItem('openai_api_key');
         if (storedKey) {
             initializeOpenAI(storedKey);
@@ -31,39 +27,34 @@ export async function evaluateAnswer(
         throw new Error('OpenAI not initialized. Please enter your API key.');
     }
     try {
+        // Build content string from columns and row
+        const content = columns
+            .filter(col => row[col.key] !== undefined && row[col.key] !== '')
+            .map(col => `${col.label}: ${row[col.key]}`)
+            .join('\n');
         const messages: ChatCompletionMessageParam[] = [
             {
-                role: "system",
+                role: 'system',
                 content: systemPrompt
             },
             {
-                role: "user",
-                content: `Question: "${question}"
-${guidance ? `Evaluation and Sample Answer Guide:\n${guidance}` : ''}
-Student's Answer: "${answer}"`
+                role: 'user',
+                content: content
             }
         ];
         const requestPayload = {
-            model: "o3-2025-04-16",
+            model: 'o3-2025-04-16',
             messages,
-            response_format: { type: "json_object" as const }
+            response_format: { type: 'json_object' as const }
         };
-
-        // Create array of promises for parallel execution
-        const promises = Array(count).fill(null).map(async () => {
-            console.log('[OpenAI API] Request:', JSON.stringify(requestPayload, null, 2));
-            const completion = await openaiInstance!.chat.completions.create(requestPayload);
-            const response = completion.choices[0].message.content;
-            console.log('[OpenAI API] Response:', response);
-            if (!response) {
-                throw new Error('No response received from API');
-            }
-            return JSON.parse(response) as ApiResponse;
-        });
-
-        // Wait for all requests to complete
-        const results = await Promise.all(promises);
-        return count === 1 ? results[0] : results;
+        const completion = await openaiInstance!.chat.completions.create(requestPayload);
+        const response = completion.choices[0].message.content;
+        if (!response) {
+            throw new Error('No response received from API');
+        }
+        const result = JSON.parse(response) as ApiResponse;
+        console.log('[Generic Evaluation] Result:', result);
+        return result;
     } catch (error) {
         console.error('Error calling OpenAI API:', error);
         throw error;
@@ -71,12 +62,17 @@ Student's Answer: "${answer}"`
 }
 
 export async function checkFeedbackCriterion(
-  question: string,
-  answer: string,
-  feedback: string,
+  contextValues: string[],
   criterion: { name: string; description: string },
-  systemPrompt = checkFeedbackCriterionPrompt
+  systemPrompt = "FALLBACK CRITERION PROMPT"
 ): Promise<{ passed: boolean, explanation: string }> {
+  // Ensure the system prompt contains the word 'json' for OpenAI API compliance
+  let safeSystemPrompt = systemPrompt;
+  if (!/json/i.test(systemPrompt)) {
+    safeSystemPrompt =
+      (systemPrompt ? systemPrompt + '\n' : '') +
+      'Respond ONLY with a JSON object: { "passed": true | false, "explanation": string }';
+  }
   if (!openaiInstance) {
     const storedKey = localStorage.getItem('openai_api_key');
     if (storedKey) {
@@ -86,17 +82,27 @@ export async function checkFeedbackCriterion(
   if (!openaiInstance) {
     throw new Error('OpenAI not initialized. Please enter your API key.');
   }
+  // Build a context string from the values
+  const contextString = contextValues.map((val, idx) => `Field${idx + 1}: ${val}`).join('\n');
+  const userMessage = `Criterion: ${criterion.name}\nDescription: ${criterion.description}\n\n${contextString}`;
   const messages: ChatCompletionMessageParam[] = [
-    { role: 'system', content: systemPrompt },
-    { role: 'user', content: `Criterion: ${criterion.name}\nDescription: ${criterion.description}\n\nQuestion: ${question}\nAnswer: ${answer}\nFeedback: ${feedback}` }
+    { role: 'system', content: safeSystemPrompt },
+    { role: 'user', content: userMessage }
   ];
   const requestPayload = {
-    model: "o3-2025-04-16",
+    model: 'o3-2025-04-16',
     messages,
-    response_format: { type: "json_object" as const }
+    response_format: { type: 'json_object' as const }
   };
-  const completion = await openaiInstance!.chat.completions.create(requestPayload);
-  const response = completion.choices[0].message.content;
-  if (!response) throw new Error('No response from LLM');
-  return JSON.parse(response);
+  // Only log request and response
+  console.log('[Criteria Evaluation] Payload:', JSON.stringify(requestPayload, null, 2));
+  try {
+    const completion = await openaiInstance!.chat.completions.create(requestPayload);
+    const response = completion.choices[0].message.content;
+    console.log('[Criteria Evaluation] Raw response:', response);
+    if (!response) throw new Error('No response from LLM');
+    return JSON.parse(response);
+  } catch (err) {
+    throw err;
+  }
 }

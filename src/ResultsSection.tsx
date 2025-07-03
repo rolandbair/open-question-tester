@@ -67,54 +67,69 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
           <table className="table results-table results-table-container rounded shadow full-width-table" style={{ tableLayout: 'fixed' }}>
             <thead>
               <tr>
-                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Prompt #</th>
-                <th style={{ width: 220, minWidth: 120, maxWidth: 320 }}>Question</th>
-                <th style={{ width: 120, minWidth: 80, maxWidth: 200 }}>Answer</th>
-                <th style={{ width: 320, minWidth: 120, maxWidth: 480 }}>Guidance</th>
-                <th style={{ width: 60, minWidth: 40, maxWidth: 80 }}>Expected</th>
-                <th style={{ width: 60, minWidth: 40, maxWidth: 80 }}>Result</th>
-                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Status</th>
-                <th style={{ width: 260, minWidth: 120, maxWidth: 400 }}>Feedback</th>
-                <th style={{ width: 180, minWidth: 80, maxWidth: 220 }}>Criteria</th>
+                {(() => {
+                  // Dynamically determine columns: always show promptNumber, then all unique keys in results except id, criteriaChecks
+                  const exclude = new Set(['id', 'subject']);
+                  const allKeys = Array.from(new Set(results.flatMap(r => Object.keys(r))));
+                  const columns = ['promptNumber', ...allKeys.filter(k => k !== 'promptNumber' && !exclude.has(k))];
+                  let headerCells: React.ReactNode[] = [];
+                  columns.forEach(key => {
+                    headerCells.push(<th key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</th>);
+                    // If key is 'result', add a correctness header cell after it if expectedResult exists in any row
+                    if (key === 'result' && results.some(r => typeof (r as any).expectedResult !== 'undefined')) {
+                      headerCells.push(<th key={key + '-correctness'}>Correct</th>);
+                    }
+                  });
+                  return headerCells;
+                })()}
               </tr>
             </thead>
             <tbody>
               {results.map((result, index) => (
                 <tr key={index} className="result-row">
-                  <td title={String(result.promptNumber)}>
-                    {String(result.promptNumber).length > 12 ? String(result.promptNumber).slice(0, 12) + '…' : result.promptNumber}
-                  </td>
-                  <td title={result.question}>
-                    {result.question.length > 180 ? result.question.slice(0, 180) + '…' : result.question}
-                  </td>
-                  <td title={result.answer}>
-                    {result.answer.length > 100 ? result.answer.slice(0, 100) + '…' : result.answer}
-                  </td>
-                  <td title={result.guidance}>
-                    {result.guidance.length > 400 ? result.guidance.slice(0, 400) + '…' : result.guidance}
-                  </td>
-                  <td title={result.expectedResult}>
-                    {String(result.expectedResult).length > 20 ? String(result.expectedResult).slice(0, 20) + '…' : result.expectedResult}
-                  </td>
-                  <td title={result.actualResult}>
-                    {String(result.actualResult).length > 20 ? String(result.actualResult).slice(0, 20) + '…' : result.actualResult}
-                  </td>
-                  <td title={result.matches ? '✔️' : '❌'}>
-                    {result.matches ? '✔️' : '❌'}
-                  </td>
-                  <td title={result.feedback}>
-                    {result.feedback.length > 300 ? result.feedback.slice(0, 300) + '…' : result.feedback}
-                  </td>
-                  <td title={result.criteriaChecks ? result.criteriaChecks.map((c) => `${c.passed === true ? '✔️' : c.passed === false ? '❌' : '⏳'} ${c.name}`).join(', ') : ''}>
-                    {result.criteriaChecks && (
-                      <span>
-                        {(() => {
-                          const str = result.criteriaChecks.map((c) => `${c.passed === true ? '✔️' : c.passed === false ? '❌' : '⏳'} ${c.name}`).join(', ');
-                          return str.length > 60 ? str.slice(0, 60) + '…' : str;
-                        })()}
-                      </span>
-                    )}
-                  </td>
+                  {(() => {
+                    const exclude = new Set(['id', 'subject']);
+                    const allKeys = Array.from(new Set(results.flatMap(r => Object.keys(r))));
+                    const columns = ['promptNumber', ...allKeys.filter(k => k !== 'promptNumber' && !exclude.has(k))];
+                    return columns.map(key => {
+                      // Use type assertion to allow dynamic key access
+                      let val = (result as any)[key];
+                      // If key is 'result', show the value, and after it, add a correctness cell if expectedResult exists
+                      if (key === 'result') {
+                        const cells = [];
+                        cells.push(<td key={key}>{val !== undefined ? String(val) : ''}</td>);
+                        // Add correctness cell right after 'result' if expectedResult exists
+                        if (typeof val !== 'undefined' && typeof (result as any).expectedResult !== 'undefined') {
+                          const match = val === (result as any).expectedResult;
+                          cells.push(<td key={key + '-correctness'}>{match ? '✔️' : '❌'}</td>);
+                        } else {
+                          cells.push(<td key={key + '-correctness'}></td>);
+                        }
+                        return cells;
+                      }
+                      if (key === 'criteriaChecks' && Array.isArray(val)) {
+                        const str = val.map((c: any) => `${c.passed === true ? '✔️' : c.passed === false ? '❌' : '⏳'} ${c.name}`).join(', ');
+                        return <td key={key} title={str}>{str.length > 60 ? str.slice(0, 60) + '…' : str}</td>;
+                      }
+                      if (typeof val === 'string' && val.length > 300) {
+                        return <td key={key} title={val}>{val.slice(0, 300) + '…'}</td>;
+                      }
+                      if (typeof val === 'boolean') {
+                        return <td key={key}>{val ? '✔️' : '❌'}</td>;
+                      }
+                      if (typeof val === 'object' && val !== null && !Array.isArray(val)) {
+                        // Render objects as JSON (truncated if long)
+                        const json = JSON.stringify(val);
+                        return <td key={key} title={json}>{json.length > 300 ? json.slice(0, 300) + '…' : json}</td>;
+                      }
+                      if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object' && val[0] !== null) {
+                        // Render arrays of objects as a summary (count) and JSON in tooltip
+                        const json = JSON.stringify(val);
+                        return <td key={key} title={json}>[{val.length} items]</td>;
+                      }
+                      return <td key={key}>{val !== undefined ? String(val) : ''}</td>;
+                    });
+                  })()}
                 </tr>
               ))}
             </tbody>

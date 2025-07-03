@@ -1,21 +1,28 @@
-import React, { useState } from 'react';
-import { evaluateAnswer, checkFeedbackCriterion } from './api';
-import type { CsvRow, ProcessedResult, EvaluationResult, ApiResponse } from './types';
+import React, { useState, useEffect } from 'react';
+import { checkFeedbackCriterion } from './api';
+import type { EvaluationResult } from './types';
 import { v4 as uuidv4 } from 'uuid';
-import { defaultSystemPrompt, initialFeedbackCriteria } from './prompts';
 import PromptCriteriaSection from './PromptCriteriaSection';
 import TestDataSection from './TestDataSection';
 import ResultsSection from './ResultsSection';
 import { parsePromptFile, parseTableCsv } from './utils/csvUtils';
+import { flows } from './flows';
+import type { FlowConfig } from './flows';
+// import { log } from 'console';
 
 // Table row type for editable table
-interface EditableRow extends CsvRow {
+interface EditableRow {
   id: string;
+  [key: string]: any;
 }
 
 export default function UnifiedEvaluator() {
+  // --- State: Flow Selection ---
+  const [selectedFlowId, setSelectedFlowId] = useState(flows[0].id);
+  const selectedFlow: FlowConfig = flows.find(f => f.id === selectedFlowId)!;
+
   // --- State: Prompts ---
-  const [systemPrompt, setSystemPrompt] = useState(defaultSystemPrompt);
+  const [systemPrompt, setSystemPrompt] = useState(selectedFlow.systemPrompt || '');
   const [promptFileError, setPromptFileError] = useState<string | null>(null);
   type PromptFileType = null | string[] | { number: string; prompt: string }[];
   const [promptFilePrompts, setPromptFilePrompts] = useState<PromptFileType>(null);
@@ -23,28 +30,46 @@ export default function UnifiedEvaluator() {
 
   // --- State: Criteria ---
   const [criteriaEnabled, setCriteriaEnabled] = useState(false);
-  const [criteria, setCriteria] = useState(JSON.stringify(initialFeedbackCriteria));
+  const [criteria, setCriteria] = useState(JSON.stringify(selectedFlow.feedbackCriteria || []));
   const [criteriaError, setCriteriaError] = useState<string | null>(null);
 
   // --- State: Table Data ---
   const [rows, setRows] = useState<EditableRow[]>([{
     id: uuidv4(),
-    question: '',
-    answer: '',
-    guidance: '',
-    expectedResult: 'correct',
+    ...Object.fromEntries(selectedFlow.testDataColumns.map(col => [col.key, '']))
   }]);
   const [csvError, setCsvError] = useState<string | null>(null);
 
   // --- State: Evaluation ---
   const [requestCount, setRequestCount] = useState(1);
-  const [results, setResults] = useState<ProcessedResult[]>([]);
+  const [results, setResults] = useState<any[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
 
   // --- State: UI Collapsible Sections ---
   const [showPrompts, setShowPrompts] = useState(true);
   const [showData, setShowData] = useState(true);
   const [showResults, setShowResults] = useState(true);
+
+  // --- Handlers: Flow Change ---
+  const handleFlowChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const flowId = e.target.value;
+    setSelectedFlowId(flowId);
+    const flow = flows.find(f => f.id === flowId)!;
+    setRows([{ id: uuidv4(), ...Object.fromEntries(flow.testDataColumns.map(col => [col.key, ''])) }]);
+    setResults([]);
+    setCsvError(null);
+    setSystemPrompt(flow.systemPrompt || '');
+    setCriteria(JSON.stringify(flow.feedbackCriteria || []));
+    setPromptFilePrompts(null);
+    setPromptFileName(null);
+    setPromptFileError(null);
+  };
+
+  // Keep systemPrompt and criteria in sync with selectedFlow if flow changes externally
+  useEffect(() => {
+    setSystemPrompt(selectedFlow.systemPrompt || '');
+    setCriteria(JSON.stringify(selectedFlow.feedbackCriteria || []));
+  }, [selectedFlow]);
 
   // --- Handlers: Prompt File Upload ---
   const handlePromptUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -64,7 +89,6 @@ export default function UnifiedEvaluator() {
           setPromptFileError('Invalid CSV format for prompts. Each row should have a prompt number and prompt text.');
         }
       } else {
-        // Treat as plain text prompt, assign number '1'
         setPromptFilePrompts([{ number: '1', prompt: text }]);
         setPromptFileError(null);
       }
@@ -77,10 +101,13 @@ export default function UnifiedEvaluator() {
   const handleCsvUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    const requiredKeys = selectedFlow.testDataColumns.filter(col => col.required).map(col => col.key);
     parseTableCsv(
       file,
-      (parsed) => {
-        setRows(parsed.map(row => ({ ...row, id: uuidv4() })));
+      requiredKeys,
+      (validRows: any[]) => {
+        // Logging for debugging (already handled in csvUtils)
+        setRows(validRows.map(row => ({ id: uuidv4(), ...row })));
         setCsvError(null);
       },
       (msg) => setCsvError(msg)
@@ -88,10 +115,10 @@ export default function UnifiedEvaluator() {
   };
 
   // --- Handlers: Editable Table ---
-  const updateRow = (id: string, field: keyof CsvRow, value: string) => {
+  const updateRow = (id: string, field: string, value: string) => {
     setRows(rows => rows.map(row => row.id === id ? { ...row, [field]: value } : row));
   };
-  const addRow = () => setRows([...rows, { id: uuidv4(), question: '', answer: '', guidance: '', expectedResult: 'correct' }]);
+  const addRow = () => setRows([...rows, { id: uuidv4(), ...Object.fromEntries(selectedFlow.testDataColumns.map(col => [col.key, ''])) }]);
   const removeRow = (id: string) => setRows(rows => rows.filter(row => row.id !== id));
 
   // --- Handlers: Criteria JSON ---
@@ -129,45 +156,74 @@ export default function UnifiedEvaluator() {
     } else {
       prompts = [{ number: 1, prompt: systemPrompt }];
     }
-    const allPromises: Promise<ProcessedResult>[] = [];
+    const allPromises: Promise<any>[] = [];
     rows.forEach(row => {
       prompts.forEach(({ number, prompt }) => {
-        allPromises.push((async () => {
-          try {
-            const response = await evaluateAnswer(row.question, row.guidance, '', row.answer, prompt, requestCount) as ApiResponse;
-            let criteriaChecks = undefined;
-            if (criteriaEnabled && parsedCriteria.length > 0) {
-              const relevantCriteria = parsedCriteria.filter((c: any) => c.result === (response.result || 'incorrect'));
-              criteriaChecks = await Promise.all(relevantCriteria.map(async (c: any) => {
-                try {
-                  const check = await checkFeedbackCriterion(row.question, row.answer, response.feedback || response.evaluation || '', c);
-                  return { name: c.name, passed: check.passed, explanation: check.explanation };
-                } catch {
-                  return { name: c.name, passed: null, explanation: 'Error' };
+        for (let i = 0; i < requestCount; i++) {
+          allPromises.push((async () => {
+            let feedbackVal = '';
+            try {
+              const response = await selectedFlow.evaluate(
+                row,
+                prompt,
+                systemPrompt
+              );
+              // Use the feedback field as defined by the flow, fallback to response.feedback or response.evaluation
+              const feedbackField = selectedFlow.feedbackField || 'ERROR';
+              feedbackVal = response[feedbackField];
+              const criteriaPrompt = selectedFlow.checkFeedbackCriterionPrompt;
+              let criteriaChecks = undefined;
+              if (criteriaEnabled && parsedCriteria.length > 0) {
+                // If any criterion has a 'result' field, filter by result; otherwise, check all criteria
+                let relevantCriteria: any[];
+                if (parsedCriteria.some((c: any) => 'result' in c)) {
+                  const resultVal = response.result ?? response.status ?? undefined;
+                  relevantCriteria = parsedCriteria.filter((c: any) => c.result ? c.result === resultVal : true);
+                } else {
+                  relevantCriteria = parsedCriteria;
                 }
-              }));
+                // Use the first two required columns for criteria checking if available
+                const requiredCols = selectedFlow.testDataColumns.filter(col => col.required);
+                const requiredColValues = requiredCols.map(col => row[col.key] || '');
+                criteriaChecks = await Promise.all(relevantCriteria.map(async (c: any) => {
+                  try {
+                    const check = await checkFeedbackCriterion(
+                      [...requiredColValues, feedbackVal],
+                      c,
+                      criteriaPrompt
+                    );
+                    return { name: c.name, passed: check.passed, explanation: check.explanation };
+                  } catch (err) {
+                    console.error('[Criteria Evaluation] Error in checkFeedbackCriterion:', err);
+                    return { name: c.name, passed: null, explanation: 'Error' };
+                  }
+                }));
+              }
+              // Build result object: merge all response fields, add matches if expected, add promptUsed and promptNumber
+              // Filter out 'type' property from response before merging
+              const { type, ...responseWithoutType } = response;
+              const resultObj: any = {
+                ...row,
+                ...responseWithoutType,
+                promptNumber: number,
+                ...(criteriaChecks !== undefined ? { criteriaChecks } : {}),
+              };
+              // If the response contains a 'matches' field, perform correctness logic
+              if (typeof response.result !== 'undefined' && typeof response.expected !== 'undefined') {
+                resultObj.matches = response.result === response.expected;
+              }
+              return resultObj;
+            } catch {
+              return {
+                ...row,
+                actualResult: 'incorrect' as EvaluationResult,
+                feedback: 'Error processing row',
+                matches: false,
+                promptNumber: number,
+              };
             }
-            return {
-              ...row,
-              actualResult: response.result || 'incorrect',
-              feedback: (response.emoji ? response.emoji + ' ' : '') + (response.feedback || response.evaluation || 'No feedback provided'),
-              emoji: response.emoji,
-              matches: (response.result || 'incorrect') === row.expectedResult,
-              promptUsed: prompt,
-              promptNumber: number,
-              ...(criteriaChecks !== undefined ? { criteriaChecks } : {}),
-            };
-          } catch {
-            return {
-              ...row,
-              actualResult: 'incorrect' as EvaluationResult,
-              feedback: 'Error processing row',
-              matches: false,
-              promptUsed: prompt,
-              promptNumber: number,
-            };
-          }
-        })());
+          })());
+        }
       });
     });
     const allResults = await Promise.all(allPromises);
@@ -178,6 +234,16 @@ export default function UnifiedEvaluator() {
   // --- Render ---
   return (
     <div className="container flex flex-col gap">
+      {/* Flow Selection */}
+      <div className="rounded shadow text" style={{ marginBottom: 16, padding: 8 }}>
+        <label htmlFor="flow-select">Flow:</label>
+        <select id="flow-select" value={selectedFlowId} onChange={handleFlowChange} style={{ marginLeft: 8 }}>
+          {flows.map(flow => (
+            <option key={flow.id} value={flow.id}>{flow.name}</option>
+          ))}
+        </select>
+      </div>
+
       {/* Test Prompts Section */}
       <PromptCriteriaSection
         showPrompts={showPrompts}
@@ -208,6 +274,7 @@ export default function UnifiedEvaluator() {
         updateRow={updateRow}
         addRow={addRow}
         removeRow={removeRow}
+        columns={selectedFlow.testDataColumns}
       />
 
       {/* Number of evaluations and Evaluate button (not collapsible) */}

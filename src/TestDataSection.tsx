@@ -1,8 +1,9 @@
 import React from 'react';
-import type { CsvRow } from './types';
+import type { FlowColumn } from './flows';
 
-interface EditableRow extends CsvRow {
+interface EditableRow {
   id: string;
+  [key: string]: any;
 }
 
 interface TestDataSectionProps {
@@ -10,11 +11,12 @@ interface TestDataSectionProps {
   setShowData: React.Dispatch<React.SetStateAction<boolean>>;
   rows: EditableRow[];
   addRow: () => void;
-  updateRow: (id: string, field: keyof CsvRow, value: string) => void;
+  updateRow: (id: string, field: string, value: string) => void;
   removeRow: (id: string) => void;
   handleCsvUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
   setRows: React.Dispatch<React.SetStateAction<EditableRow[]>>;
   csvError: string | null;
+  columns: FlowColumn[];
 }
 
 const TestDataSection: React.FC<TestDataSectionProps> = ({
@@ -27,6 +29,7 @@ const TestDataSection: React.FC<TestDataSectionProps> = ({
   handleCsvUpload,
   setRows,
   csvError,
+  columns,
 }) => (
   <div className="rounded shadow" style={{ background: 'var(--bg)' }}>
     <div className="flex title section-toggle" onClick={() => setShowData(v => !v)}>
@@ -44,33 +47,32 @@ const TestDataSection: React.FC<TestDataSectionProps> = ({
               <button type="button" onClick={() => document.getElementById('csv-upload')?.click()}>📂</button>
             </label>
             <span className="table-toolbar-label table-toolbar-csv">Add rows from CSV</span>
-            <button type="button" onClick={() => setRows([{ id: rows[0]?.id || '', question: '', answer: '', guidance: '', expectedResult: 'correct' }])} title="Clear table">🗑️ <span className="table-toolbar-label">Clear table</span></button>
+            <button type="button" onClick={() => setRows([{ id: rows[0]?.id || '', ...Object.fromEntries(columns.map(col => [col.key, ''])) }])} title="Clear table">🗑️ <span className="table-toolbar-label">Clear table</span></button>
             {csvError && <div className="error">{csvError}</div>}
           </div>
           <div className="table-scroll">
             <table className="table results-table">
               <thead>
                 <tr>
-                  <th>Question</th>
-                  <th>Answer</th>
-                  <th>Guidance</th>
-                  <th>Expected Result</th>
+                  {columns.map(col => (
+                    <th key={col.key}>{col.label}</th>
+                  ))}
                   <th></th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((row) => (
                   <tr key={row.id}>
-                    <td><textarea value={row.question} onChange={e => updateRow(row.id, 'question', e.target.value)} rows={2} className="table-input" /></td>
-                    <td><textarea value={row.answer} onChange={e => updateRow(row.id, 'answer', e.target.value)} rows={2} className="table-input" /></td>
-                    <td><textarea value={row.guidance} onChange={e => updateRow(row.id, 'guidance', e.target.value)} rows={2} className="table-input" /></td>
-                    <td>
-                      <select value={row.expectedResult} onChange={e => updateRow(row.id, 'expectedResult', e.target.value)} className="table-input">
-                        <option value="correct">correct</option>
-                        <option value="partially">partially</option>
-                        <option value="incorrect">incorrect</option>
-                      </select>
-                    </td>
+                    {columns.map(col => (
+                      <td key={col.key}>
+                        <textarea
+                          value={row[col.key] || ''}
+                          onChange={e => updateRow(row.id, col.key, e.target.value)}
+                          rows={2}
+                          className="table-input"
+                        />
+                      </td>
+                    ))}
                     <td>
                       <button type="button" onClick={() => removeRow(row.id)} title="Remove row" className="table-remove-btn">➖</button>
                     </td>
