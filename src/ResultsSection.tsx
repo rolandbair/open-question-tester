@@ -229,9 +229,6 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
                         const str = val.map((c: any) => `${c.passed === true ? '✔️' : c.passed === false ? '❌' : '⏳'} ${c.name}`).join(', ');
                         return <td key={key} title={str}>{str.length > 60 ? str.slice(0, 60) + '…' : str}</td>;
                       }
-                      if (typeof val === 'string' && val.length > 300) {
-                        return <td key={key} title={val}>{val.slice(0, 300) + '…'}</td>;
-                      }
                       if (typeof val === 'boolean') {
                         return <td key={key}>{val ? '✔️' : '❌'}</td>;
                       }
