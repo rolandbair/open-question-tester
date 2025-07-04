@@ -301,6 +301,8 @@ export default function UnifiedEvaluator() {
         isProcessing={isProcessing}
         results={results}
         setResults={setResults}
+        testDataColumns={selectedFlow?.testDataColumns || []}
+        showCriteriaChecks={criteriaEnabled}
       />
     </div>
   );

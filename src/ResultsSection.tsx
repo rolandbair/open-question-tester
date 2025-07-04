@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ProcessedResult } from './types';
+import type { FlowColumn } from './flows';
 
 interface ResultsSectionProps {
   showResults: boolean;
@@ -7,6 +8,8 @@ interface ResultsSectionProps {
   isProcessing: boolean;
   results: ProcessedResult[];
   setResults: React.Dispatch<React.SetStateAction<ProcessedResult[]>>;
+  testDataColumns?: FlowColumn[];
+  showCriteriaChecks?: boolean;
 }
 
 const ResultsSection: React.FC<ResultsSectionProps> = ({
@@ -15,6 +18,8 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
   isProcessing,
   results,
   setResults,
+  testDataColumns = [],
+  showCriteriaChecks = false,
 }) => (
   <div className="rounded shadow text" style={{ background: 'var(--bg)' }}>
     <div className="flex title section-toggle" onClick={() => setShowResults(v => !v)}>
@@ -68,12 +73,45 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
             <thead>
               <tr>
                 {(() => {
-                  // Dynamically determine columns: always show promptNumber, then all unique keys in results except id, criteriaChecks
-                  const exclude = new Set(['id', 'subject']);
+                  // Build column order as specified:
+                  // 1. promptNumber
+                  // 2. testDataColumns (except id, subject)
+                  // 3. result + correctness (if exists)
+                  // 4. other result entities (except type)
+                  // 5. criteriaChecks (if showCriteriaChecks is true)
+                  
+                  const exclude = new Set(['id', 'subject', 'type']);
                   const allKeys = Array.from(new Set(results.flatMap(r => Object.keys(r))));
-                  const columns = ['promptNumber', ...allKeys.filter(k => k !== 'promptNumber' && !exclude.has(k))];
+                  
+                  // Start with promptNumber
+                  const orderedColumns = ['promptNumber'];
+                  
+                  // Add testDataColumns (filtered)
+                  const testDataKeys = testDataColumns
+                    .map(col => col.key)
+                    .filter(key => !exclude.has(key) && key !== 'promptNumber');
+                  orderedColumns.push(...testDataKeys);
+                  
+                  // Add result column
+                  if (allKeys.includes('result')) {
+                    orderedColumns.push('result');
+                  }
+                  
+                  // Add remaining columns (except already included and excluded)
+                  const remainingKeys = allKeys.filter(key => 
+                    !orderedColumns.includes(key) && 
+                    !exclude.has(key) && 
+                    key !== 'criteriaChecks'
+                  );
+                  orderedColumns.push(...remainingKeys);
+                  
+                  // Add criteriaChecks at the end if requested
+                  if (showCriteriaChecks && allKeys.includes('criteriaChecks')) {
+                    orderedColumns.push('criteriaChecks');
+                  }
+                  
                   let headerCells: React.ReactNode[] = [];
-                  columns.forEach(key => {
+                  orderedColumns.forEach(key => {
                     headerCells.push(<th key={key}>{key.charAt(0).toUpperCase() + key.slice(1)}</th>);
                     // If key is 'result', add a correctness header cell after it if expectedResult exists in any row
                     if (key === 'result' && results.some(r => typeof (r as any).expectedResult !== 'undefined')) {
@@ -88,10 +126,38 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
               {results.map((result, index) => (
                 <tr key={index} className="result-row">
                   {(() => {
-                    const exclude = new Set(['id', 'subject']);
+                    // Use the same column ordering logic as in the header
+                    const exclude = new Set(['id', 'subject', 'type']);
                     const allKeys = Array.from(new Set(results.flatMap(r => Object.keys(r))));
-                    const columns = ['promptNumber', ...allKeys.filter(k => k !== 'promptNumber' && !exclude.has(k))];
-                    return columns.map(key => {
+                    
+                    // Start with promptNumber
+                    const orderedColumns = ['promptNumber'];
+                    
+                    // Add testDataColumns (filtered)
+                    const testDataKeys = testDataColumns
+                      .map(col => col.key)
+                      .filter(key => !exclude.has(key) && key !== 'promptNumber');
+                    orderedColumns.push(...testDataKeys);
+                    
+                    // Add result column
+                    if (allKeys.includes('result')) {
+                      orderedColumns.push('result');
+                    }
+                    
+                    // Add remaining columns (except already included and excluded)
+                    const remainingKeys = allKeys.filter(key => 
+                      !orderedColumns.includes(key) && 
+                      !exclude.has(key) && 
+                      key !== 'criteriaChecks'
+                    );
+                    orderedColumns.push(...remainingKeys);
+                    
+                    // Add criteriaChecks at the end if requested
+                    if (showCriteriaChecks && allKeys.includes('criteriaChecks')) {
+                      orderedColumns.push('criteriaChecks');
+                    }
+                    
+                    return orderedColumns.map(key => {
                       // Use type assertion to allow dynamic key access
                       let val = (result as any)[key];
                       // If key is 'result', show the value, and after it, add a correctness cell if expectedResult exists
