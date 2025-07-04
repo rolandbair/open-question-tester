@@ -42,26 +42,78 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
             <thead>
               <tr>
                 <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Prompt #</th>
-                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Matches</th>
-                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Non-matches</th>
                 <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Total</th>
-                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Correct</th>
-                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Incorrect</th>
+                {/* Only show result correctness columns if any result has expectedResult */}
+                {results.some(r => typeof (r as any).expectedResult !== 'undefined') ? (
+                  <>
+                    <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Result Incorrect</th>
+                    <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Result Correct</th>
+                  </>
+                ) : (
+                  <>
+                    <th style={{ width: 36, minWidth: 24, maxWidth: 48, color: '#666' }}>Result Incorrect</th>
+                    <th style={{ width: 36, minWidth: 24, maxWidth: 48, color: '#666' }}>Result Correct</th>
+                  </>
+                )}
+                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Criteria Incorrect</th>
+                <th style={{ width: 36, minWidth: 24, maxWidth: 48 }}>Criteria Correct</th>
               </tr>
             </thead>
             <tbody>
               {Array.from(new Set(results.map(r => r.promptNumber))).map((num) => {
                 const group = results.filter(r => r.promptNumber === num);
-                const correctCount = group.filter(r => r.actualResult === 'correct').length;
-                const incorrectCount = group.filter(r => r.actualResult === 'incorrect').length;
+                const total = group.length;
+                
+                // Check if any result in this group has expectedResult for comparison
+                const hasExpectedResults = group.some(r => typeof (r as any).expectedResult !== 'undefined');
+                
+                // Result correctness (based on result vs expectedResult comparison)
+                let resultCorrect = 0;
+                let resultIncorrect = 0;
+                if (hasExpectedResults) {
+                  resultCorrect = group.filter(r => {
+                    const hasExpected = typeof (r as any).expectedResult !== 'undefined';
+                    const hasResult = typeof (r as any).result !== 'undefined';
+                    return hasExpected && hasResult && (r as any).result === (r as any).expectedResult;
+                  }).length;
+                  resultIncorrect = group.filter(r => {
+                    const hasExpected = typeof (r as any).expectedResult !== 'undefined';
+                    const hasResult = typeof (r as any).result !== 'undefined';
+                    return hasExpected && hasResult && (r as any).result !== (r as any).expectedResult;
+                  }).length;
+                }
+                
+                // Criteria correctness (based on criteriaChecks)
+                let criteriaCorrect = 0;
+                let criteriaIncorrect = 0;
+                if (showCriteriaChecks) {
+                  group.forEach(r => {
+                    if (r.criteriaChecks && Array.isArray(r.criteriaChecks)) {
+                      r.criteriaChecks.forEach(check => {
+                        if (check.passed === true) criteriaCorrect++;
+                        else if (check.passed === false) criteriaIncorrect++;
+                      });
+                    }
+                  });
+                }
+                
                 return (
                   <tr key={num} className="results-summary">
                     <td className="results-summary-title">{num}</td>
-                    <td className="summary-item matches">{group.filter(r => r.matches).length}</td>
-                    <td className="summary-item non-matches">{group.filter(r => !r.matches).length}</td>
-                    <td className="summary-item total">{group.length}</td>
-                    <td className="summary-item correct">{correctCount}</td>
-                    <td className="summary-item incorrect">{incorrectCount}</td>
+                    <td className="summary-item total">{total}</td>
+                    {hasExpectedResults ? (
+                      <>
+                        <td className="summary-item incorrect" style={{ backgroundColor: '#fee', color: '#c53030' }}>{resultIncorrect}</td>
+                        <td className="summary-item correct" style={{ backgroundColor: '#efe', color: '#38a169' }}>{resultCorrect}</td>
+                      </>
+                    ) : (
+                      <>
+                        <td className="summary-item" style={{ color: '#666' }}>-</td>
+                        <td className="summary-item" style={{ color: '#666' }}>-</td>
+                      </>
+                    )}
+                    <td className="summary-item incorrect" style={{ backgroundColor: '#fee', color: '#c53030' }}>{showCriteriaChecks ? criteriaIncorrect : '-'}</td>
+                    <td className="summary-item correct" style={{ backgroundColor: '#efe', color: '#38a169' }}>{showCriteriaChecks ? criteriaCorrect : '-'}</td>
                   </tr>
                 );
               })}

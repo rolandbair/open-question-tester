@@ -23,7 +23,7 @@ export const flows: FlowConfig[] = [
     id: 'open-question-feedback',
     name: 'Open Question Feedback',
     testDataColumns: [
-      { key: 'question', label: 'Question', required: true },
+      { key: 'task', label: 'Task', required: true },
       { key: 'answer', label: 'Answer', required: true },
       { key: 'guidance', label: 'Guidance' },
       { key: 'expectedResult', label: 'Expected Result', required: true }
@@ -45,7 +45,7 @@ export const flows: FlowConfig[] = [
     id: 'open-question-guidance',
     name: 'Open Question Guidance',
     testDataColumns: [
-      { key: 'question', label: 'Question', required: true }
+      { key: 'task', label: 'Task', required: true }
     ],
     evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
       const api = await import('./api');
