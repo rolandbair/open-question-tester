@@ -166,7 +166,8 @@ export default function UnifiedEvaluator() {
               const response = await selectedFlow.evaluate(
                 row,
                 prompt,
-                systemPrompt
+                systemPrompt,
+                selectedFlow.testDataColumns
               );
               // Use the feedback field as defined by the flow, fallback to response.feedback or response.evaluation
               const feedbackField = selectedFlow.feedbackField || 'ERROR';

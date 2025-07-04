@@ -27,8 +27,11 @@ export async function evaluateGeneric(
         throw new Error('OpenAI not initialized. Please enter your API key.');
     }
     try {
-        // Build content string from columns and row
-        const content = columns
+        // Filter out expectedResult column from columns used for evaluation
+        const filteredColumns = columns.filter(col => col.key !== 'expectedResult');
+        
+        // Build content string from filtered columns and row
+        const content = filteredColumns
             .filter(col => row[col.key] !== undefined && row[col.key] !== '')
             .map(col => `${col.label}: ${row[col.key]}`)
             .join('\n');

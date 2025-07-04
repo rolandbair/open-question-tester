@@ -11,7 +11,7 @@ export type FlowConfig = {
   name: string;
   testDataColumns: FlowColumn[];
   // Add more flow-specific config as needed
-  evaluate: (row: any, prompt: string, systemPrompt: string) => Promise<any>;
+  evaluate: (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => Promise<any>;
   systemPrompt?: string;
   feedbackCriteria?: any[];
   checkFeedbackCriterionPrompt?: string;
@@ -28,15 +28,11 @@ export const flows: FlowConfig[] = [
       { key: 'guidance', label: 'Guidance' },
       { key: 'expectedResult', label: 'Expected Result', required: true }
     ],
-    evaluate: async (row: any, prompt: string, systemPrompt: string) => {
+    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
       const api = await import('./api');
       return api.evaluateGeneric(
         row,
-        [
-          { key: 'question', label: 'Question' },
-          { key: 'answer', label: 'Answer' },
-          { key: 'guidance', label: 'Guidance' }
-        ],
+        testDataColumns,
         systemPrompt || prompt
       );
     },
@@ -51,13 +47,11 @@ export const flows: FlowConfig[] = [
     testDataColumns: [
       { key: 'question', label: 'Question', required: true }
     ],
-    evaluate: async (row: any, prompt: string, systemPrompt: string) => {
+    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
       const api = await import('./api');
       return api.evaluateGeneric(
         row,
-        [
-          { key: 'question', label: 'Question' }
-        ],
+        testDataColumns,
         systemPrompt || prompt
       );
     },
