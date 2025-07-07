@@ -10,6 +10,9 @@ interface ResultsSectionProps {
   setResults: React.Dispatch<React.SetStateAction<ProcessedResult[]>>;
   testDataColumns?: FlowColumn[];
   showCriteriaChecks?: boolean;
+  currentPrompt?: string;
+  currentCriteria?: string;
+  testFileName?: string;
 }
 
 const ResultsSection: React.FC<ResultsSectionProps> = ({
@@ -20,7 +23,171 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
   setResults,
   testDataColumns = [],
   showCriteriaChecks = false,
-}) => (
+  currentPrompt = '',
+  currentCriteria = '',
+  testFileName = '',
+}) => {
+  const [downloadText, setDownloadText] = React.useState('');
+
+  const downloadResults = () => {
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const runDateTime = new Date().toLocaleString();
+    
+    // Create CSV content
+    let csvContent = '';
+    
+    // Add metadata header
+    csvContent += `Test Run Report\n`;
+    csvContent += `Generated: ${runDateTime}\n`;
+    csvContent += `Test File: ${testFileName}\n`;
+    csvContent += `Custom Notes: ${downloadText}\n`;
+    csvContent += `\n`;
+    
+    // Add prompt information
+    if (currentPrompt) {
+      csvContent += `Prompt:\n`;
+      csvContent += `"${currentPrompt.replace(/"/g, '""')}"\n`;
+      csvContent += `\n`;
+    }
+    
+    // Add criteria information if enabled
+    if (showCriteriaChecks && currentCriteria) {
+      csvContent += `Criteria:\n`;
+      csvContent += `"${currentCriteria.replace(/"/g, '""')}"\n`;
+      csvContent += `\n`;
+    }
+    
+    // Add summary table
+    csvContent += `Summary by Prompt\n`;
+    csvContent += `Prompt #,Total,Result Incorrect,Result Correct,Criteria Incorrect,Criteria Correct\n`;
+    
+    Array.from(new Set(results.map(r => r.promptNumber))).forEach((num) => {
+      const group = results.filter(r => r.promptNumber === num);
+      const total = group.length;
+      
+      // Check if any result in this group has expectedResult for comparison
+      const hasExpectedResults = group.some(r => typeof (r as any).expectedResult !== 'undefined');
+      
+      // Result correctness (based on result vs expectedResult comparison)
+      let resultCorrect = 0;
+      let resultIncorrect = 0;
+      if (hasExpectedResults) {
+        resultCorrect = group.filter(r => {
+          const hasExpected = typeof (r as any).expectedResult !== 'undefined';
+          const hasResult = typeof (r as any).result !== 'undefined';
+          return hasExpected && hasResult && (r as any).result === (r as any).expectedResult;
+        }).length;
+        resultIncorrect = group.filter(r => {
+          const hasExpected = typeof (r as any).expectedResult !== 'undefined';
+          const hasResult = typeof (r as any).result !== 'undefined';
+          return hasExpected && hasResult && (r as any).result !== (r as any).expectedResult;
+        }).length;
+      }
+      
+      // Criteria correctness (based on criteriaChecks)
+      let criteriaCorrect = 0;
+      let criteriaIncorrect = 0;
+      if (showCriteriaChecks) {
+        group.forEach(r => {
+          if (r.criteriaChecks && Array.isArray(r.criteriaChecks)) {
+            r.criteriaChecks.forEach(check => {
+              if (check.passed === true) criteriaCorrect++;
+              else if (check.passed === false) criteriaIncorrect++;
+            });
+          }
+        });
+      }
+      
+      csvContent += `${num},${total},${hasExpectedResults ? resultIncorrect : '-'},${hasExpectedResults ? resultCorrect : '-'},${showCriteriaChecks ? criteriaIncorrect : '-'},${showCriteriaChecks ? criteriaCorrect : '-'}\n`;
+    });
+    
+    csvContent += `\n`;
+    
+    // Add detailed results table
+    csvContent += `Detailed Results\n`;
+    
+    // Build column headers
+    const exclude = new Set(['id', 'subject', 'type']);
+    const allKeys = Array.from(new Set(results.flatMap(r => Object.keys(r))));
+    
+    // Start with promptNumber
+    const orderedColumns = ['promptNumber'];
+    
+    // Add testDataColumns (filtered)
+    const testDataKeys = testDataColumns
+      .map(col => col.key)
+      .filter(key => !exclude.has(key) && key !== 'promptNumber');
+    orderedColumns.push(...testDataKeys);
+    
+    // Add result column
+    if (allKeys.includes('result')) {
+      orderedColumns.push('result');
+      // Add correctness column if expectedResult exists
+      if (results.some(r => typeof (r as any).expectedResult !== 'undefined')) {
+        orderedColumns.push('correct');
+      }
+    }
+    
+    // Add remaining columns (except already included and excluded)
+    const remainingKeys = allKeys.filter(key => 
+      !orderedColumns.includes(key) && 
+      !exclude.has(key) && 
+      key !== 'criteriaChecks'
+    );
+    orderedColumns.push(...remainingKeys);
+    
+    // Add criteriaChecks at the end if requested
+    if (showCriteriaChecks && allKeys.includes('criteriaChecks')) {
+      orderedColumns.push('criteriaChecks');
+    }
+    
+    // Write headers
+    csvContent += orderedColumns.map(col => col.charAt(0).toUpperCase() + col.slice(1)).join(',') + '\n';
+    
+    // Write data rows
+    results.forEach((result) => {
+      const row: string[] = [];
+      orderedColumns.forEach(key => {
+        if (key === 'correct') {
+          // This is the correctness column we added after 'result'
+          const hasExpected = typeof (result as any).expectedResult !== 'undefined';
+          const hasResult = typeof (result as any).result !== 'undefined';
+          if (hasExpected && hasResult) {
+            const match = (result as any).result === (result as any).expectedResult;
+            row.push(match ? 'TRUE' : 'FALSE');
+          } else {
+            row.push('');
+          }
+        } else {
+          let val = (result as any)[key];
+          if (key === 'criteriaChecks' && Array.isArray(val)) {
+            const str = val.map((c: any) => `${c.passed === true ? 'PASS' : c.passed === false ? 'FAIL' : 'PENDING'}: ${c.name}`).join('; ');
+            row.push(`"${str.replace(/"/g, '""')}"`);
+          } else if (typeof val === 'object' && val !== null) {
+            row.push(`"${JSON.stringify(val).replace(/"/g, '""')}"`);
+          } else if (typeof val === 'string' && val.includes(',')) {
+            row.push(`"${val.replace(/"/g, '""')}"`);
+          } else {
+            row.push(val !== undefined ? String(val) : '');
+          }
+        }
+      });
+      csvContent += row.join(',') + '\n';
+    });
+    
+    // Create and download file
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', `test-results-${timestamp}.csv`);
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  return (
   <div className="rounded shadow text" style={{ background: 'var(--bg)' }}>
     <div className="flex title section-toggle" onClick={() => setShowResults(v => !v)}>
       <span className="section-toggle-label">
@@ -31,6 +198,18 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
       <div className="section-content text">
         {!isProcessing && results.length > 0 && (
           <div className="flex results-clear-row">
+            <div className="flex" style={{ gap: '0.5rem', alignItems: 'center' }}>
+              <input
+                type="text"
+                placeholder="Custom notes for export..."
+                value={downloadText}
+                onChange={(e) => setDownloadText(e.target.value)}
+                style={{ minWidth: '200px' }}
+              />
+              <button type="button" onClick={downloadResults}>
+                Download Results
+              </button>
+            </div>
             <div style={{ flex: 1 }} />
             <button type="button" onClick={() => setResults([])}>
               Clear Results
@@ -254,5 +433,6 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
     )}
   </div>
 );
+};
 
 export default ResultsSection;

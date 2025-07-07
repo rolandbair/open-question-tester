@@ -303,6 +303,9 @@ export default function UnifiedEvaluator() {
         setResults={setResults}
         testDataColumns={selectedFlow?.testDataColumns || []}
         showCriteriaChecks={criteriaEnabled}
+        currentPrompt={systemPrompt}
+        currentCriteria={criteria}
+        testFileName={promptFileName || 'manual-input'}
       />
     </div>
   );
