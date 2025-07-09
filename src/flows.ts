@@ -1,4 +1,4 @@
-import { SystemPrompt_OpenQuestionsGuidance, PromptPart_OpenQuestionsFeedbackCriteria, SystemPrompt_OpenQuestionsFeedback, PromptPart_OpenQuestionsGuidance, Prompt_OpenQuestionsFeedbackCriteria, Prompt_OpenQuestionsGuidanceCriteria } from './prompts';
+import { SystemPrompt_OpenQuestionsGuidance, PromptPart_OpenQuestionsFeedbackCriteria, SystemPrompt_OpenQuestionsFeedback, PromptPart_OpenQuestionsGuidance, Prompt_OpenQuestionsFeedbackCriteria, Prompt_OpenQuestionsGuidanceCriteria, PromptPart_OpenQuestionsStudentSummary, Prompt_OpenQuestionsStudentSummaryCriteria, SystemPrompt_OpenQuestionsStudentSummary } from './prompts';
 
 export type FlowColumn = {
   key: string;
@@ -45,7 +45,8 @@ export const flows: FlowConfig[] = [
     id: 'open-question-guidance',
     name: 'Open Question Guidance',
     testDataColumns: [
-      { key: 'task', label: 'Task', required: true }
+      { key: 'task', label: 'Task', required: true },
+      { key: 'context', label: 'Context' },
     ],
     evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
       const api = await import('./api');
@@ -58,6 +59,27 @@ export const flows: FlowConfig[] = [
     systemPrompt: SystemPrompt_OpenQuestionsGuidance,
     feedbackCriteria: PromptPart_OpenQuestionsGuidance,
     checkFeedbackCriterionPrompt: Prompt_OpenQuestionsGuidanceCriteria,
+    feedbackField: 'guidance'
+  },
+  {
+    id: 'open-question-student-summary',
+    name: 'Open Question Student Summary',
+    testDataColumns: [
+      { key: 'studentName', label: 'StudentName', required: true },
+      { key: 'materialTitle', label: 'MaterialTitle' },
+      { key: 'tasks', label: 'Tasks', required: true },
+    ],
+    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
+      const api = await import('./api');
+      return api.evaluateGeneric(
+        row,
+        testDataColumns,
+        systemPrompt || prompt
+      );
+    },
+    systemPrompt: SystemPrompt_OpenQuestionsStudentSummary,
+    feedbackCriteria: PromptPart_OpenQuestionsStudentSummary,
+    checkFeedbackCriterionPrompt: Prompt_OpenQuestionsStudentSummaryCriteria,
     feedbackField: 'guidance'
   }
 ];

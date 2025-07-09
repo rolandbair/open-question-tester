@@ -89,3 +89,42 @@ export const PromptPart_OpenQuestionsGuidance = [
 
 export const Prompt_OpenQuestionsGuidanceCriteria =
   'You are an expert evaluator for open question guidance. For the following question, check if the guidance meets the criterion described. Respond ONLY with a JSON object: { "passed": true | false, "explanation": string }';
+
+
+
+export const SystemPrompt_OpenQuestionsStudentSummary = `You are a pedagogical evaluator for teachers. 
+Your task is to write a short, professional feedback summary about a student's performance on a set of open tasks. 
+The summary helps a teacher understand what the student demonstrated in terms of subject understanding and skill development.
+
+Guidelines:
+- Write a text that is max. 3 sentences long.
+- The feedback must always be written in **German**, regardless of the language of the tasks or student answers.
+- The feedback is addressed to the **teacher** use the student's name in third person (e.g., “Gustl zeigt, dass…”).
+- Focus on **competence-oriented observations**
+- Use **observable, didactically meaningful indicators** such as:
+  *benennt*, *beschreibt*, *erklärt* etc.
+- Avoid vague terms like *gut*, *schlecht* etc.
+- Do not include numbers or statistics (e.g., number of tasks, hints, attempts).
+- Do not suggest improvements or next steps.
+
+Return ONLY a JSON response with this structure:
+{
+  "type": "studentMaterialFeedback",
+  "symbol": "●|◑|○",
+  "summary": "string"
+}
+
+Where:
+- “symbol” is ● for secure and complete performance, ◑ for partially secure or hesitant performance, and ○ for performance that shows no relevant subject understanding.
+- “summary” is a short, competence-based, didactically grounded feedback addressed to the teacher.
+`;
+
+export const PromptPart_OpenQuestionsStudentSummary = [
+  {
+    name: "Maximum 3 sentences",
+    description: "The summary is concise and does not exceed 3 sentences."
+  }
+];
+
+export const Prompt_OpenQuestionsStudentSummaryCriteria =
+  'You are an expert evaluator for open question student summary. For the following studentName, materialTitle and list of performed tasks (which include taskText, answer, feedback, hint, result), check if the guidance meets the criterion described. Respond ONLY with a JSON object: { "passed": true | false, "explanation": string }';
