@@ -79,6 +79,6 @@ export const flows: FlowConfig[] = [
     systemPrompt: SystemPrompt_OpenQuestionsStudentSummary,
     feedbackCriteria: PromptPart_OpenQuestionsStudentSummary,
     checkFeedbackCriterionPrompt: Prompt_OpenQuestionsStudentSummaryCriteria,
-    feedbackField: 'guidance'
+    feedbackField: 'summary'
   }
 ];
