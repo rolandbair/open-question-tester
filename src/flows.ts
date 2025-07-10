@@ -66,7 +66,6 @@ export const flows: FlowConfig[] = [
     name: 'Open Question Student Summary',
     testDataColumns: [
       { key: 'studentName', label: 'StudentName', required: true },
-      { key: 'materialTitle', label: 'MaterialTitle' },
       { key: 'tasks', label: 'Tasks', required: true },
     ],
     evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
