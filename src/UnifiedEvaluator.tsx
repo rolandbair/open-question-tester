@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { checkFeedbackCriterion } from './api';
 import type { EvaluationResult } from './types';
+import type { EvaluationParams } from './types/modelTypes';
+import { SUPPORTED_MODELS } from './types/modelTypes';
 import { v4 as uuidv4 } from 'uuid';
 import PromptCriteriaSection from './PromptCriteriaSection';
 import TestDataSection from './TestDataSection';
 import ResultsSection from './ResultsSection';
+import ModelSelection from './components/ModelSelection';
 import { parsePromptFile, parseTableCsv } from './utils/csvUtils';
 import { flows } from './flows';
 import type { FlowConfig } from './flows';
@@ -20,6 +23,11 @@ export default function UnifiedEvaluator() {
   // --- State: Flow Selection ---
   const [selectedFlowId, setSelectedFlowId] = useState(flows[0].id);
   const selectedFlow: FlowConfig = flows.find(f => f.id === selectedFlowId)!;
+
+  // --- State: Model Selection ---
+  const [evaluationParams, setEvaluationParams] = useState<EvaluationParams>({
+    model: SUPPORTED_MODELS[0].id
+  });
 
   // --- State: Prompts ---
   const [systemPrompt, setSystemPrompt] = useState(selectedFlow.systemPrompt || '');
@@ -167,7 +175,8 @@ export default function UnifiedEvaluator() {
                 row,
                 prompt,
                 systemPrompt,
-                selectedFlow.testDataColumns
+                selectedFlow.testDataColumns,
+                evaluationParams
               );
               // Use the feedback field as defined by the flow, fallback to response.feedback or response.evaluation
               const feedbackField = selectedFlow.feedbackField || 'ERROR';
@@ -191,7 +200,8 @@ export default function UnifiedEvaluator() {
                     const check = await checkFeedbackCriterion(
                       [...requiredColValues, feedbackVal],
                       c,
-                      criteriaPrompt
+                      criteriaPrompt,
+                      evaluationParams
                     );
                     return { name: c.name, passed: check.passed, explanation: check.explanation };
                   } catch (err) {
@@ -235,14 +245,22 @@ export default function UnifiedEvaluator() {
   // --- Render ---
   return (
     <div className="container flex flex-col gap">
-      {/* Flow Selection */}
+      {/* Flow Selection and Model Selection */}
       <div className="rounded shadow text" style={{ marginBottom: 16, padding: 8 }}>
-        <label htmlFor="flow-select">Flow:</label>
-        <select id="flow-select" value={selectedFlowId} onChange={handleFlowChange} style={{ marginLeft: 8 }}>
-          {flows.map(flow => (
-            <option key={flow.id} value={flow.id}>{flow.name}</option>
-          ))}
-        </select>
+        <div style={{ display: 'flex', gap: '24px', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div>
+            <label htmlFor="flow-select">Flow:</label>
+            <select id="flow-select" value={selectedFlowId} onChange={handleFlowChange} style={{ marginLeft: 8 }}>
+              {flows.map(flow => (
+                <option key={flow.id} value={flow.id}>{flow.name}</option>
+              ))}
+            </select>
+          </div>
+          <ModelSelection 
+            evaluationParams={evaluationParams}
+            onParamsChange={setEvaluationParams}
+          />
+        </div>
       </div>
 
       {/* Test Prompts Section */}

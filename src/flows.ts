@@ -1,5 +1,6 @@
 import { SystemPrompt_OpenQuestionsGuidance, PromptPart_OpenQuestionsFeedbackCriteria, SystemPrompt_OpenQuestionsFeedback, PromptPart_OpenQuestionsGuidance, Prompt_OpenQuestionsFeedbackCriteria, Prompt_OpenQuestionsGuidanceCriteria, PromptPart_OpenQuestionsStudentSummary, Prompt_OpenQuestionsStudentSummaryCriteria, SystemPrompt_OpenQuestionsStudentSummary } from './prompts';
 import type { GitLabPromptConfig } from './services/gitlabService';
+import type { EvaluationParams } from './types/modelTypes';
 
 export type FlowColumn = {
   key: string;
@@ -12,7 +13,7 @@ export type FlowConfig = {
   name: string;
   testDataColumns: FlowColumn[];
   // Add more flow-specific config as needed
-  evaluate: (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => Promise<any>;
+  evaluate: (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[], evaluationParams?: EvaluationParams) => Promise<any>;
   systemPrompt?: string;
   feedbackCriteria?: any[];
   checkFeedbackCriterionPrompt?: string;
@@ -30,12 +31,13 @@ export const flows: FlowConfig[] = [
       { key: 'guidance', label: 'Guidance' },
       { key: 'expectedResult', label: 'Expected Result', required: true }
     ],
-    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
+    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[], evaluationParams?: EvaluationParams) => {
       const api = await import('./api');
       return api.evaluateGeneric(
         row,
         testDataColumns,
-        systemPrompt || prompt
+        systemPrompt || prompt,
+        evaluationParams
       );
     },
     systemPrompt: SystemPrompt_OpenQuestionsFeedback,
@@ -50,12 +52,13 @@ export const flows: FlowConfig[] = [
       { key: 'task', label: 'Task', required: true },
       { key: 'context', label: 'Context' },
     ],
-    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
+    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[], evaluationParams?: EvaluationParams) => {
       const api = await import('./api');
       return api.evaluateGeneric(
         row,
         testDataColumns,
-        systemPrompt || prompt
+        systemPrompt || prompt,
+        evaluationParams
       );
     },
     systemPrompt: SystemPrompt_OpenQuestionsGuidance,
@@ -76,12 +79,13 @@ export const flows: FlowConfig[] = [
       { key: 'studentName', label: 'StudentName', required: true },
       { key: 'tasks', label: 'Tasks', required: true },
     ],
-    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[]) => {
+    evaluate: async (row: any, prompt: string, systemPrompt: string, testDataColumns: FlowColumn[], evaluationParams?: EvaluationParams) => {
       const api = await import('./api');
       return api.evaluateGeneric(
         row,
         testDataColumns,
-        systemPrompt || prompt
+        systemPrompt || prompt,
+        evaluationParams
       );
     },
     systemPrompt: SystemPrompt_OpenQuestionsStudentSummary,

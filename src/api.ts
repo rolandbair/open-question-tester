@@ -1,6 +1,7 @@
 import OpenAI from 'openai';
 import type { ApiResponse } from './types';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
+import type { EvaluationParams } from './types/modelTypes';
 
 let openaiInstance: OpenAI | null = null;
 
@@ -15,7 +16,8 @@ export function initializeOpenAI(apiKey: string) {
 export async function evaluateGeneric(
     row: Record<string, any>,
     columns: { key: string; label: string }[],
-    systemPrompt: string = "FALLBACK PROMPT"
+    systemPrompt: string = "FALLBACK PROMPT",
+    evaluationParams?: EvaluationParams
 ): Promise<ApiResponse | ApiResponse[]> {
     if (!openaiInstance) {
         const storedKey = localStorage.getItem('openai_api_key');
@@ -46,9 +48,11 @@ export async function evaluateGeneric(
             }
         ];
         const requestPayload = {
-            model: 'o3-2025-04-16',
+            model: evaluationParams?.model || 'o3-2025-04-16',
             messages,
-            response_format: { type: 'json_object' as const }
+            response_format: { type: 'json_object' as const },
+            ...(evaluationParams?.temperature !== undefined && { temperature: evaluationParams.temperature }),
+            ...(evaluationParams?.top_p !== undefined && { top_p: evaluationParams.top_p })
         };
         
         // Track response time
@@ -77,7 +81,8 @@ export async function evaluateGeneric(
 export async function checkFeedbackCriterion(
   contextValues: string[],
   criterion: { name: string; description: string },
-  systemPrompt = "FALLBACK CRITERION PROMPT"
+  systemPrompt = "FALLBACK CRITERION PROMPT",
+  evaluationParams?: EvaluationParams
 ): Promise<{ passed: boolean, explanation: string, responseTime?: number }> {
   // Ensure the system prompt contains the word 'json' for OpenAI API compliance
   let safeSystemPrompt = systemPrompt;
@@ -103,9 +108,11 @@ export async function checkFeedbackCriterion(
     { role: 'user', content: userMessage }
   ];
   const requestPayload = {
-    model: 'o3-2025-04-16',
+    model: evaluationParams?.model || 'o3-2025-04-16',
     messages,
-    response_format: { type: 'json_object' as const }
+    response_format: { type: 'json_object' as const },
+    ...(evaluationParams?.temperature !== undefined && { temperature: evaluationParams.temperature }),
+    ...(evaluationParams?.top_p !== undefined && { top_p: evaluationParams.top_p })
   };
   // Only log request and response
   console.log('[Criteria Evaluation] Payload:', JSON.stringify(requestPayload, null, 2));
