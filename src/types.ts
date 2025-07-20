@@ -9,6 +9,7 @@ export interface ApiResponse {
     result?: EvaluationResult;
     feedback?: string;
     emoji?: '👍' | '👉' | '👎';
+    responseTime?: number; // Response time in milliseconds
 }
 
 export interface AggregatedApiResponse extends ApiResponse {

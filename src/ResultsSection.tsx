@@ -132,11 +132,17 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
     const remainingKeys = allKeys.filter(key => 
       !orderedColumns.includes(key) && 
       !exclude.has(key) && 
-      key !== 'criteriaChecks'
+      key !== 'criteriaChecks' &&
+      key !== 'responseTime'
     );
     orderedColumns.push(...remainingKeys);
     
-    // Add criteriaChecks at the end if requested
+    // Add responseTime column at the end (before criteriaChecks)
+    if (allKeys.includes('responseTime')) {
+      orderedColumns.push('responseTime');
+    }
+    
+    // Add criteriaChecks at the very end if requested
     if (showCriteriaChecks && allKeys.includes('criteriaChecks')) {
       orderedColumns.push('criteriaChecks');
     }
@@ -332,11 +338,17 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
                   const remainingKeys = allKeys.filter(key => 
                     !orderedColumns.includes(key) && 
                     !exclude.has(key) && 
-                    key !== 'criteriaChecks'
+                    key !== 'criteriaChecks' &&
+                    key !== 'responseTime'
                   );
                   orderedColumns.push(...remainingKeys);
                   
-                  // Add criteriaChecks at the end if requested
+                  // Add responseTime column at the end (before criteriaChecks)
+                  if (allKeys.includes('responseTime')) {
+                    orderedColumns.push('responseTime');
+                  }
+                  
+                  // Add criteriaChecks at the very end if requested
                   if (showCriteriaChecks && allKeys.includes('criteriaChecks')) {
                     orderedColumns.push('criteriaChecks');
                   }
@@ -379,11 +391,17 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
                     const remainingKeys = allKeys.filter(key => 
                       !orderedColumns.includes(key) && 
                       !exclude.has(key) && 
-                      key !== 'criteriaChecks'
+                      key !== 'criteriaChecks' &&
+                      key !== 'responseTime'
                     );
                     orderedColumns.push(...remainingKeys);
                     
-                    // Add criteriaChecks at the end if requested
+                    // Add responseTime column at the end (before criteriaChecks)
+                    if (allKeys.includes('responseTime')) {
+                      orderedColumns.push('responseTime');
+                    }
+                    
+                    // Add criteriaChecks at the very end if requested
                     if (showCriteriaChecks && allKeys.includes('criteriaChecks')) {
                       orderedColumns.push('criteriaChecks');
                     }
@@ -407,6 +425,10 @@ const ResultsSection: React.FC<ResultsSectionProps> = ({
                       if (key === 'criteriaChecks' && Array.isArray(val)) {
                         const str = val.map((c: any) => `${c.passed === true ? '✔️' : c.passed === false ? '❌' : '⏳'} ${c.name}`).join(', ');
                         return <td key={key} title={str}>{str.length > 60 ? str.slice(0, 60) + '…' : str}</td>;
+                      }
+                      if (key === 'responseTime' && typeof val === 'number') {
+                        const timeStr = val < 1000 ? `${val}ms` : `${(val / 1000).toFixed(1)}s`;
+                        return <td key={key} title={`${val}ms`}>{timeStr}</td>;
                       }
                       if (typeof val === 'boolean') {
                         return <td key={key}>{val ? '✔️' : '❌'}</td>;

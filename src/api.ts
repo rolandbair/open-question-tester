@@ -50,12 +50,22 @@ export async function evaluateGeneric(
             messages,
             response_format: { type: 'json_object' as const }
         };
+        
+        // Track response time
+        const startTime = performance.now();
         const completion = await openaiInstance!.chat.completions.create(requestPayload);
+        const endTime = performance.now();
+        const responseTime = Math.round(endTime - startTime);
+        
         const response = completion.choices[0].message.content;
         if (!response) {
             throw new Error('No response received from API');
         }
         const result = JSON.parse(response) as ApiResponse;
+        
+        // Add response time to result
+        result.responseTime = responseTime;
+        
         console.log('[Generic Evaluation] Result:', result);
         return result;
     } catch (error) {
@@ -68,7 +78,7 @@ export async function checkFeedbackCriterion(
   contextValues: string[],
   criterion: { name: string; description: string },
   systemPrompt = "FALLBACK CRITERION PROMPT"
-): Promise<{ passed: boolean, explanation: string }> {
+): Promise<{ passed: boolean, explanation: string, responseTime?: number }> {
   // Ensure the system prompt contains the word 'json' for OpenAI API compliance
   let safeSystemPrompt = systemPrompt;
   if (!/json/i.test(systemPrompt)) {
@@ -99,13 +109,18 @@ export async function checkFeedbackCriterion(
   };
   // Only log request and response
   console.log('[Criteria Evaluation] Payload:', JSON.stringify(requestPayload, null, 2));
-  try {
-    const completion = await openaiInstance!.chat.completions.create(requestPayload);
-    const response = completion.choices[0].message.content;
-    console.log('[Criteria Evaluation] Raw response:', response);
-    if (!response) throw new Error('No response from LLM');
-    return JSON.parse(response);
-  } catch (err) {
-    throw err;
-  }
+  
+  // Track response time
+  const startTime = performance.now();
+  const completion = await openaiInstance!.chat.completions.create(requestPayload);
+  const endTime = performance.now();
+  const responseTime = Math.round(endTime - startTime);
+  
+  const response = completion.choices[0].message.content;
+  console.log('[Criteria Evaluation] Raw response:', response);
+  if (!response) throw new Error('No response from LLM');
+  
+  const result = JSON.parse(response);
+  result.responseTime = responseTime;
+  return result;
 }
