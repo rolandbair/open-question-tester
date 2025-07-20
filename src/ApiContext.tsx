@@ -1,10 +1,13 @@
 import { createContext, useContext, useState, useEffect } from 'react';
 import type { ReactNode } from 'react';
 import { initializeOpenAI } from './api';
+import { GitLabService } from './services/gitlabService';
 
 interface ApiContextType {
   apiKey: string;
   setApiKey: (key: string) => void;
+  gitlabToken: string;
+  setGitlabToken: (token: string) => void;
 }
 
 const ApiContext = createContext<ApiContextType | undefined>(undefined);
@@ -15,6 +18,11 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     return saved || '';
   });
 
+  const [gitlabToken, setGitlabToken] = useState(() => {
+    const saved = localStorage.getItem('gitlab_access_token');
+    return saved || '';
+  });
+
   useEffect(() => {
     if (apiKey) {
       localStorage.setItem('openai_api_key', apiKey);
@@ -22,8 +30,17 @@ export function ApiProvider({ children }: { children: ReactNode }) {
     }
   }, [apiKey]);
 
+  useEffect(() => {
+    if (gitlabToken) {
+      localStorage.setItem('gitlab_access_token', gitlabToken);
+      GitLabService.setAccessToken(gitlabToken);
+    } else {
+      GitLabService.clearAccessToken();
+    }
+  }, [gitlabToken]);
+
   return (
-    <ApiContext.Provider value={{ apiKey, setApiKey }}>
+    <ApiContext.Provider value={{ apiKey, setApiKey, gitlabToken, setGitlabToken }}>
       {children}
     </ApiContext.Provider>
   );

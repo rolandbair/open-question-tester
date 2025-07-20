@@ -262,6 +262,7 @@ export default function UnifiedEvaluator() {
         criteria={criteria}
         criteriaError={criteriaError}
         handleCriteriaChange={handleCriteriaChange}
+        gitlabPromptConfig={selectedFlow.gitlabPrompt}
       />
 
       {/* Test Data Section */}

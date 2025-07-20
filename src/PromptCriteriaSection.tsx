@@ -1,4 +1,6 @@
 import React from 'react';
+import GitLabPromptSection from './GitLabPromptSection';
+import type { GitLabPromptConfig } from './services/gitlabService';
 
 interface PromptCriteriaSectionProps {
   showPrompts: boolean;
@@ -16,6 +18,7 @@ interface PromptCriteriaSectionProps {
   criteria: string;
   handleCriteriaChange: (val: string) => void;
   criteriaError: string | null;
+  gitlabPromptConfig?: GitLabPromptConfig; // Add GitLab config
 }
 
 const PromptCriteriaSection: React.FC<PromptCriteriaSectionProps> = ({
@@ -34,6 +37,7 @@ const PromptCriteriaSection: React.FC<PromptCriteriaSectionProps> = ({
   criteria,
   handleCriteriaChange,
   criteriaError,
+  gitlabPromptConfig, // Add GitLab config
 }) => (
   <div className="rounded shadow" style={{ background: 'var(--bg)' }}>
     <div className="flex title section-toggle" onClick={() => setShowPrompts(v => !v)}>
@@ -67,6 +71,19 @@ const PromptCriteriaSection: React.FC<PromptCriteriaSectionProps> = ({
             disabled={!!promptFilePrompts}
           />
           <input className="prompt-file-upload" type="file" accept=".txt,.md,.csv" onChange={handlePromptUpload} />
+          
+          {/* GitLab Prompt Section */}
+          {gitlabPromptConfig && (
+            <GitLabPromptSection
+              config={gitlabPromptConfig}
+              onPromptFetched={(prompt) => {
+                setSystemPrompt(prompt);
+                setPromptFilePrompts(null);
+                setPromptFileName(null);
+              }}
+              disabled={!!promptFilePrompts}
+            />
+          )}
         </div>
         <div className="input-group flex-1 criteria-group">
           <div className="criteria-label-row">
