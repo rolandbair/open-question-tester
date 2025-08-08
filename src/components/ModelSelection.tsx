@@ -1,5 +1,5 @@
 import type { EvaluationParams } from '../types/modelTypes';
-import { SUPPORTED_MODELS, DEFAULT_TEMPERATURE, DEFAULT_TOP_P } from '../types/modelTypes';
+import { SUPPORTED_MODELS, DEFAULT_TEMPERATURE, DEFAULT_TOP_P, DEFAULT_REASONING_EFFORT } from '../types/modelTypes';
 
 interface ModelSelectionProps {
   evaluationParams: EvaluationParams;
@@ -15,7 +15,9 @@ export default function ModelSelection({ evaluationParams, onParamsChange }: Mod
       const newParams: EvaluationParams = {
         model: modelId,
         ...(model.supportsTemperature && { temperature: evaluationParams.temperature ?? DEFAULT_TEMPERATURE }),
-        ...(model.supportsTopP && { top_p: evaluationParams.top_p ?? DEFAULT_TOP_P })
+        ...(model.supportsTopP && { top_p: evaluationParams.top_p ?? DEFAULT_TOP_P }),
+        ...(model.supportsReasoningEffort && { reasoning_effort: evaluationParams.reasoning_effort ?? DEFAULT_REASONING_EFFORT }),
+        ...(model.supportsServiceTier && evaluationParams.service_tier && { service_tier: evaluationParams.service_tier })
       };
       onParamsChange(newParams);
     }
@@ -33,6 +35,23 @@ export default function ModelSelection({ evaluationParams, onParamsChange }: Mod
       ...evaluationParams,
       top_p
     });
+  };
+
+  const handleReasoningEffortChange = (reasoning_effort: 'high' | 'medium' | 'low' | 'minimal') => {
+    onParamsChange({
+      ...evaluationParams,
+      reasoning_effort
+    });
+  };
+
+  const handleServiceTierChange = (enabled: boolean) => {
+    const newParams = { ...evaluationParams };
+    if (enabled) {
+      newParams.service_tier = 'priority';
+    } else {
+      delete newParams.service_tier;
+    }
+    onParamsChange(newParams);
   };
 
   return (
@@ -79,6 +98,35 @@ export default function ModelSelection({ evaluationParams, onParamsChange }: Mod
             value={evaluationParams.top_p ?? DEFAULT_TOP_P}
             onChange={(e) => handleTopPChange(parseFloat(e.target.value))}
             style={{ width: '80px' }}
+          />
+        </div>
+      )}
+
+      {selectedModel.supportsReasoningEffort && (
+        <div>
+          <label htmlFor="reasoning-effort-select" style={{ marginRight: '8px' }}>Reasoning Effort:</label>
+          <select
+            id="reasoning-effort-select"
+            value={evaluationParams.reasoning_effort ?? DEFAULT_REASONING_EFFORT}
+            onChange={(e) => handleReasoningEffortChange(e.target.value as 'high' | 'medium' | 'low' | 'minimal')}
+            style={{ minWidth: '100px' }}
+          >
+            <option value="minimal">Minimal</option>
+            <option value="low">Low</option>
+            <option value="medium">Medium</option>
+            <option value="high">High</option>
+          </select>
+        </div>
+      )}
+
+      {selectedModel.supportsServiceTier && (
+        <div>
+          <label htmlFor="service-tier-checkbox" style={{ marginRight: '8px' }}>Priority Service:</label>
+          <input
+            id="service-tier-checkbox"
+            type="checkbox"
+            checked={evaluationParams.service_tier === 'priority'}
+            onChange={(e) => handleServiceTierChange(e.target.checked)}
           />
         </div>
       )}

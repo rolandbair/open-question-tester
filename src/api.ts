@@ -3,6 +3,16 @@ import type { ApiResponse } from './types';
 import type { ChatCompletionMessageParam } from 'openai/resources/chat';
 import type { EvaluationParams } from './types/modelTypes';
 
+interface OpenAIRequestPayload {
+    model: string;
+    messages: ChatCompletionMessageParam[];
+    response_format: { type: 'json_object' };
+    temperature?: number;
+    top_p?: number;
+    reasoning_effort?: string;
+    service_tier?: string;
+}
+
 let openaiInstance: OpenAI | null = null;
 
 export function initializeOpenAI(apiKey: string) {
@@ -47,17 +57,19 @@ export async function evaluateGeneric(
                 content: content
             }
         ];
-        const requestPayload = {
-            model: evaluationParams?.model || 'o3-2025-04-16',
+        const requestPayload: OpenAIRequestPayload = {
+            model: evaluationParams?.model || 'gpt-4.1-2025-04-14',
             messages,
             response_format: { type: 'json_object' as const },
             ...(evaluationParams?.temperature !== undefined && { temperature: evaluationParams.temperature }),
-            ...(evaluationParams?.top_p !== undefined && { top_p: evaluationParams.top_p })
+            ...(evaluationParams?.top_p !== undefined && { top_p: evaluationParams.top_p }),
+            ...(evaluationParams?.reasoning_effort !== undefined && { reasoning_effort: evaluationParams.reasoning_effort }),
+            ...(evaluationParams?.service_tier !== undefined && { service_tier: evaluationParams.service_tier })
         };
         
         // Track response time
         const startTime = performance.now();
-        const completion = await openaiInstance!.chat.completions.create(requestPayload);
+        const completion = await openaiInstance!.chat.completions.create(requestPayload as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming) as OpenAI.Chat.Completions.ChatCompletion;
         const endTime = performance.now();
         const responseTime = Math.round(endTime - startTime);
         
@@ -107,19 +119,21 @@ export async function checkFeedbackCriterion(
     { role: 'system', content: safeSystemPrompt },
     { role: 'user', content: userMessage }
   ];
-  const requestPayload = {
-    model: evaluationParams?.model || 'o3-2025-04-16',
+  const requestPayload: OpenAIRequestPayload = {
+    model: evaluationParams?.model || 'gpt-4.1-2025-04-14',
     messages,
     response_format: { type: 'json_object' as const },
     ...(evaluationParams?.temperature !== undefined && { temperature: evaluationParams.temperature }),
-    ...(evaluationParams?.top_p !== undefined && { top_p: evaluationParams.top_p })
+    ...(evaluationParams?.top_p !== undefined && { top_p: evaluationParams.top_p }),
+    ...(evaluationParams?.reasoning_effort !== undefined && { reasoning_effort: evaluationParams.reasoning_effort }),
+    ...(evaluationParams?.service_tier !== undefined && { service_tier: evaluationParams.service_tier })
   };
   // Only log request and response
   console.log('[Criteria Evaluation] Payload:', JSON.stringify(requestPayload, null, 2));
   
   // Track response time
   const startTime = performance.now();
-  const completion = await openaiInstance!.chat.completions.create(requestPayload);
+  const completion = await openaiInstance!.chat.completions.create(requestPayload as OpenAI.Chat.Completions.ChatCompletionCreateParamsNonStreaming) as OpenAI.Chat.Completions.ChatCompletion;
   const endTime = performance.now();
   const responseTime = Math.round(endTime - startTime);
   

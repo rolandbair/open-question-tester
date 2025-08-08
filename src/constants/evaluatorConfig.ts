@@ -9,7 +9,7 @@ export const EVALUATOR_CONFIG = {
     MAX_FILE_SIZE: 5 * 1024 * 1024 // 5MB
   },
   API: {
-    MODEL: 'o3-2025-04-16',
+    MODEL: 'gpt-4.1-2025-04-14',
     RESPONSE_FORMAT: { type: 'json_object' as const }
   },
   GITLAB: {
